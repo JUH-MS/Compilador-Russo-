@@ -1,0 +1,7 @@
+PARSER_BEGIN(NomeDaClassePrincipal)
+public class NomeDaClassePrincipal {
+    public static void main(String args[]) {
+        System.out.println("JavaCC funcionando!");
+    }
+}
+PARSER_END(NomeDaClassePrincipal)
