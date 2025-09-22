@@ -1,7 +1,31 @@
-PARSER_BEGIN(NomeDaClassePrincipal)
-public class NomeDaClassePrincipal {
-    public static void main(String args[]) {
-        System.out.println("JavaCC funcionando!");
+PARSER_BEGIN(RusskiyCompiler)
+public class RusskiyCompiler {
+    public static void main(String args[]) throws ParseException
+    {
+      RusskiyCompiler parser = new RusskiyCompiler(System.in);
+      while (true)
+      {
+        System.out.println("Nachalo");
+        System.out.println("Digite sua frase e vamos ver se até Dostoiévski aprovaria.");
+        try
+        {
+            RusskiyCompiler.main();
+            System.out.println("✔ Código aceito com sucesso!");
+        }
+        catch (Exception e)
+        {
+            System.out.println("Frase inválida! Stalin não aprovaria essa sintaxe.");
+            System.out.println("Detalhes: " + e.getMessage());
+            RusskiyCompiler.ReInit(System.in);
+        }
+        catch (Error e)
+        {
+            System.out.println("Esse comando é tão pesado que nem o Kremlin processa.");
+            System.out.println("Menssagem: " + e.getMessage());
+            break;
+        }
+
+      }
     }
 }
-PARSER_END(NomeDaClassePrincipal)
+PARSER_END(RusskiyCompiler)
