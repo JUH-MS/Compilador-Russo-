@@ -1,3 +1,7 @@
+options {
+  STATIC = false;
+}
+
 PARSER_BEGIN(RusskiyCompiler)
 public class RusskiyCompiler {
     public static void main(String args[]) throws ParseException
@@ -9,23 +13,140 @@ public class RusskiyCompiler {
         System.out.println("Digite sua frase e vamos ver se até Dostoiévski aprovaria.");
         try
         {
-            RusskiyCompiler.main();
+            parser.Programa(); // corrigido: chama a gramática
             System.out.println("✔ Código aceito com sucesso!");
         }
         catch (Exception e)
         {
             System.out.println("Frase inválida! Stalin não aprovaria essa sintaxe.");
             System.out.println("Detalhes: " + e.getMessage());
-            RusskiyCompiler.ReInit(System.in);
+            parser.ReInit(System.in); // corrigido: reinit no parser criado
         }
         catch (Error e)
         {
             System.out.println("Esse comando é tão pesado que nem o Kremlin processa.");
-            System.out.println("Menssagem: " + e.getMessage());
+            System.out.println("Mensagem: " + e.getMessage());
             break;
         }
-
       }
     }
 }
 PARSER_END(RusskiyCompiler)
+
+SKIP : {
+    " " | "\t" | "\n" | "\r"
+}
+
+MORE : {
+    < "//" (~["\n","\r"])* > : DEFAULT
+}
+
+// =============================
+// Tokens
+// =============================
+TOKEN : {
+    < VOID      : "pusto"               >
+  | < INT       : "tseloye"             >
+  | < FLOAT     : "drobnoye"            >
+  | < STRING    : "slova"               >
+  | < IF        : "yesli"               >
+  | < ELSE      : "inache"              >
+  | < FOR       : "kazhday"             >
+  | < WHILE     : "poka"                >
+  | < PRINT     : "vyvod"               >
+  | < INPUT     : "vvod"                >
+
+  | <IDENTIFIER : (["a"-"z","A"-"Z"])+  >
+  | <NUMBER     : (["0"-"9"])+          >
+
+  | < PLUS      : "+"                   >
+  | < MINUS     : "-"                   >
+  | < MULT      : "*"                   >
+  | < DIV       : "/"                   >
+  | < POW       : "**"                  >
+  | < DIVINT    : "//"                  >
+  | < MOD       : "%"                   >
+
+  | < LPAREN    : "("                   >
+  | < RPAREN    : ")"                   >
+  | < SEMICOLON : ";"                   >
+  | < LBRACE    : "{"                   >
+  | < RBRACE    : "}"                   >
+
+  | < ASSIGN    : "="                   >
+}
+
+// =============================
+// Gramática
+// =============================
+void Programa() : {}
+{
+    (Comando())* <EOF>
+}
+
+void Comando() : {}
+{
+    Condicional()
+  | Iteracao()
+  | FraseFinalizada()
+}
+
+void FraseFinalizada() : {}
+{
+    Frase() <SEMICOLON>
+}
+
+void Frase() : {}
+{
+    Atribuicao()
+  | Identificador()
+  | Expressao()
+}
+
+void Expressao() : {}
+{
+    Termo() (OperadorBinario() Termo())*
+}
+
+void Termo() : {}
+{
+    Identificador()
+  | Numero()
+  | <LPAREN> Expressao() <RPAREN>
+}
+
+void OperadorBinario() : {}
+{
+    <PLUS> | <MINUS> | <MULT> | <DIV> | <MOD> | <POW> | <DIVINT>
+}
+
+void Identificador() : {}
+{
+    <IDENTIFIER>
+}
+
+void Numero() : {}
+{
+    <NUMBER>
+}
+
+void Atribuicao() : {}
+{
+    Identificador() <ASSIGN> Expressao()
+}
+
+void Condicional() : {}
+{
+    <IF> <LPAREN> Expressao() <RPAREN> <LBRACE> (Comando())* <RBRACE> 
+    [ <ELSE> <LBRACE> (Comando())* <RBRACE> ]
+}
+
+void Iteracao() : {}
+{
+    <WHILE> <LPAREN> Expressao() <RPAREN> <LBRACE> (Comando())* <RBRACE>
+}
+
+void Digito() : {}
+{
+    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+}
