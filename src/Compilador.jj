@@ -1,67 +1,49 @@
 options {
-  STATIC = false;
+    STATIC = false;
 }
 
 PARSER_BEGIN(RusskiyCompiler)
 public class RusskiyCompiler {
-    public static void main(String args[]) throws Exception
-    {
-      RusskiyCompiler parser = new RusskiyCompiler(System.in);
-      while (true)
-      {
-        System.out.println("Nachalo");
-        System.out.println("Digite sua frase e vamos ver se até Dostoiévski aprovaria.");
-        try
-        {
-            parser.Programa(); // chama a gramática
-            System.out.println("✔ Código aceito com sucesso!");
+    public static void main(String args[]) throws Exception {
+        RusskiyCompiler parser = new RusskiyCompiler(System.in);
+        while (true) {
+            System.out.println("Nachalo");
+            System.out.println("Digite sua frase e vamos ver se até Dostoiévski aprovaria.");
+            try {
+                parser.Programa(); // chama a gramática
+                System.out.println("✔ Código aceito com sucesso!");
+            } catch (ParseException e) {
+                System.out.println("Frase inválida! Stalin não aprovaria essa sintaxe.");
+                System.out.println("Detalhes: " + e.getMessage());
+                parser.ReInit(System.in);
+            } catch (TokenMgrError e) {
+                System.out.println("Erro léxico: caractere inválido.");
+                System.out.println("Mensagem: " + e.getMessage());
+                parser.ReInit(System.in);
+            } catch (Error e) {
+                System.out.println("Esse comando é tão pesado que nem o Kremlin processa.");
+                System.out.println("Mensagem: " + e.getMessage());
+                break;
+            }
         }
-        catch (ParseException e)
-        {
-            System.out.println("Frase inválida! Stalin não aprovaria essa sintaxe.");
-            System.out.println("Detalhes: " + e.getMessage());
-            parser.ReInit(System.in);
-        }
-        catch (TokenMgrError e)
-        {
-            System.out.println("Erro léxico: caractere inválido.");
-            System.out.println("Mensagem: " + e.getMessage());
-            parser.ReInit(System.in);
-        }
-        catch (Error e)
-        {
-            System.out.println("Esse comando é tão pesado que nem o Kremlin processa.");
-            System.out.println("Mensagem: " + e.getMessage());
-            break;
-        }
-      }
     }
 }
 PARSER_END(RusskiyCompiler)
 
-// =============================
-// Espaços ignorados
-// =============================
 SKIP : {
     " " | "\t" | "\n" | "\r"
 }
 
-// =============================
-// Comentários
-// =============================
 MORE : {
     < "#" (~["\n","\r"])* > : DEFAULT
 }
 
-// =============================
-// Tokens
-// =============================
 TOKEN : {
     < VOID          : "pusto"               >
   | < INT           : "tseloye"             >
   | < FLOAT         : "drobnoye"            >
-  | < STRING_TYPE   : "slova"               >   // tipo string
-  | < STRING_VALUE  : "\"" (~["\""])* "\""  >   // literal string com espaços
+  | < STRING_TYPE   : "slova"               >   
+  | < STRING_VALUE  : "\"" (~["\""])* "\""  >   
 
   | < IF            : "yesli"               >
   | < ELSE          : "inache"              >
@@ -70,8 +52,8 @@ TOKEN : {
   | < PRINT         : "vyvod"               >
   | < INPUT         : "vvod"                >
 
-  | <IDENTIFIER     : (["a"-"z","A"-"Z"])+  >
-  | <NUMBER         : (["0"-"9"])+          >
+  | < IDENTIFIER    : (["a"-"z","A"-"Z"])+  >
+  | < NUMBER        : (["0"-"9"])+          >
 
   | < PLUS          : "+"                   >
   | < INC           : "++"                  >
@@ -100,24 +82,25 @@ TOKEN : {
 // =============================
 // Gramática
 // =============================
+
 void Programa() : {}
 {
-     Vvod() <EOF>
+    Vvod() <EOF>
 }
 
 void Vvod() : {}
 {
-    (ListaDeDeclaracoes())* (ListaDeComandos())*
+    ListaDeDeclaracoes() ListaDeComandos()
 }
 
 void ListaDeDeclaracoes() : {}
 {
-    (Declaracao() ListaDeDeclaracoes()) | {}
+    ( Declaracao() )*
 }
 
 void ListaDeComandos() : {}
 {
-    (Comando() ListaDeComandos()) | {}
+    ( Comando() )*
 }
 
 void Declaracao() : {}
@@ -133,41 +116,43 @@ void OpcionalInicializacao() : {}
 
 void TipoEspecificador() : {}
 {
-    <VOID> | <INT> | <FLOAT> | <STRING_TYPE>
+      <VOID>
+    | <INT>
+    | <FLOAT>
+    | <STRING_TYPE>
 }
 
 void Comando() : {}
 {
-    Condicional()
-  | Iteracao()
-  | FraseFinalizada()
-  | Vyvod()
+      Condicional()
+    | Iteracao()
+    | FraseFinalizada()
+    | Vyvod()
 }
 
 void Condicional() : {}
 {
-      <IF> <LPAREN> Frase() <RPAREN> <LBRACE> (Comando())* <RBRACE>
-    | <IF> <LPAREN> Frase() <RPAREN> <LBRACE> (Comando())* <RBRACE> <ELSE> <LBRACE> (Comando())* <RBRACE>
-    | <ELSE> <LBRACE> (Comando())* <RBRACE>
+      <IF> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+    | <IF> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE> <ELSE> <LBRACE> ListaDeComandos() <RBRACE>
+    | <ELSE> <LBRACE> ListaDeComandos() <RBRACE>
 }
 
 void Iteracao() : {}
 {
-      <WHILE> <LPAREN> Frase() <RPAREN>  <LBRACE> (Comando())* <RBRACE>
-    | <FOR> <LPAREN> Frase() <SEMICOLON> Frase() <SEMICOLON> Frase() <RPAREN> <LBRACE> (Comando())* <RBRACE>  
+      <WHILE> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+    | <FOR> <LPAREN> Frase() <SEMICOLON> Frase() <SEMICOLON> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
 }
 
 void FraseFinalizada() : {}
 {
-    Frase() <SEMICOLON>
-  |
-    Frase()
+      Frase() <SEMICOLON>
+    | Frase()
     {
         System.out.println("Meu camarada Russo, um programa sem ';' é como uma vodka pela metade, não acabou.");
         while (getToken(1).kind != SEMICOLON &&
                getToken(1).kind != RBRACE &&
-               getToken(1).kind != 0) { // 0 = EOF token kind
-               getNextToken();
+               getToken(1).kind != 0) {
+            getNextToken();
         }
         if (getToken(1).kind == SEMICOLON) {
             getNextToken();
@@ -196,15 +181,22 @@ void Expressao() : {}
 
 void Termo() : {}
 {
-    Identificador()
-  | Numero()
-  | <STRING_VALUE>
-  | <LPAREN> Expressao() <RPAREN>
+      Identificador()
+    | Numero()
+    | <STRING_VALUE>
+    | <LPAREN> Expressao() <RPAREN>
 }
 
 void OperadorBinario() : {}
 {
-    <PLUS> | <MINUS> | <MULT> | <DIV> | <MOD> | <POW> | <E> | <OU>
+      <PLUS>
+    | <MINUS>
+    | <MULT>
+    | <DIV>
+    | <MOD>
+    | <POW>
+    | <E>
+    | <OU>
 }
 
 void Identificador() : {}
@@ -214,21 +206,23 @@ void Identificador() : {}
 
 void Numero () : {}
 {
-    <NUMBER>+
+    <NUMBER>
 }
 
 void OperadorIncdec () : {}
 {
-    <INC> | <DEC> 
+      <INC>
+    | <DEC>
 }
 
 void Vyvod () : {}
 {
-    (<LPAREN> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) <RPAREN> <SEMICOLON> )*
+    <PRINT> <LPAREN> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) <RPAREN> <SEMICOLON>
 }
 
-void Funktsyia() : {} {
-  Identificador() <LPAREN> ( <IDENTIFIER> ( <COMMA> <IDENTIFIER> )* )? <RPAREN> <LBRACE> (Comando())* <RBRACE>
+void Funktsyia() : {}
+{
+    Identificador() <LPAREN> ( <IDENTIFIER> ( <COMMA> <IDENTIFIER> )* )? <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
 }
 
 void Pusto () : {}
