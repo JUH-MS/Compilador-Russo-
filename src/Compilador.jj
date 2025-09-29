@@ -3,7 +3,11 @@ options {
 }
 
 PARSER_BEGIN(RusskiyCompiler)
+import java.util.*;
+
 public class RusskiyCompiler {
+  Map<String, Object> memoria = new HashMap<>();
+
     public static void main(String args[]) throws Exception {
         RusskiyCompiler parser = new RusskiyCompiler(System.in);
         boolean rodando = true;
@@ -56,6 +60,9 @@ TOKEN : {
   | < E             : "/i"                  >
   | < OU            : "ili"                 >
 
+  | < TRUE          : "true"                >
+  | < FALSE         : "false"               >
+
   | < IDENTIFIER    : (["a"-"z","A"-"Z"])+  >
   | < NUMBER        : (["0"-"9"])+          >
 
@@ -76,6 +83,12 @@ TOKEN : {
   | < LBRACE        : "{"                   >
   | < RBRACE        : "}"                   >
   | < DOT           : "."                   >
+  | < EQ            : "=="                  >
+  | < NEQ           : "!="                  >
+  | < LT            : "<"                   >
+  | < GT            : ">"                   >
+  | < LEQ           : "<="                  >
+  | < GEQ           : ">="                  >
 
   | < ASSIGN        : "="                   >
 }
@@ -113,6 +126,7 @@ void TipoEspecificador() : {} {
     | <INT>
     | <FLOAT>
     | <STRING_TYPE>
+    | Dvoichnaya()
 }
 
 void Comando() : {} {
@@ -154,7 +168,7 @@ void FraseFinalizada() : {} {
 
 void Frase() : {} {
     LOOKAHEAD(3) Atribuicao()
-  | Termo()
+  | Expressao()
 }
 
 void Atribuicao() : {} {
@@ -164,19 +178,18 @@ void Atribuicao() : {} {
 }
 
 void Expressao() : {} {
-    Termo() ( OperadorBinario() Termo() )*
+    Termo() ( (OperadorBinario() | OperadorComparacao()) Termo() )*
 }
 
-void Termo() : {} 
-{
+void Termo() : {} {
       Identificador()
     | Numero()
     | <STRING_VALUE>
+    | Dvoichnaya()
     | <LPAREN> Expressao() <RPAREN>
 }
 
-void OperadorBinario() : {} 
-{
+void OperadorBinario() : {} {
       <PLUS>
     | <MINUS>
     | <MULT>
@@ -187,24 +200,34 @@ void OperadorBinario() : {}
     | <OU>
 }
 
-void Identificador() : {} 
-{
+void OperadorComparacao() : {} {
+      <EQ>
+    | <NEQ>
+    | <LT>
+    | <GT>
+    | <LEQ>
+    | <GEQ>
+}
+
+void Identificador() : {} {
     <IDENTIFIER>
 }
 
-void Numero() : {} 
-{
+void Numero() : {} {
     <NUMBER>
 }
 
-void OperadorIncdec() : {} 
-{
+void OperadorIncdec() : {} {
       <INC>
     | <DEC>
 }
 
-void Vyvod() : {} 
-{
+void Dvoichnaya() : {} {
+      <TRUE>
+    | <FALSE>
+}
+
+void Vyvod() : {} {
     <PRINT> <LPAREN> 
     ListaDeArgumentos() 
     <RPAREN> <SEMICOLON>
@@ -213,18 +236,20 @@ void Vyvod() : {}
     }
 }
 
-void ListaDeArgumentos() : {} 
-{
-    ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) 
-    ( <COMMA> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) )*
+void ListaDeArgumentos() : {} {
+    ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> | <TRUE> | <FALSE> ) 
+    ( <COMMA> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> | <TRUE> | <FALSE> ) )*
 }
 
-void Funktsyia() : {} 
-{
-    Identificador() <LPAREN> ( <IDENTIFIER> ( <COMMA> <IDENTIFIER> )* )? <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+void Funktsyia() : {} {
+    Identificador() <LPAREN> ListaDeComandos() <RPAREN> 
+    <LBRACE> ListaDeComandos() Vozvrat() <RBRACE>
 }
 
-void Pusto() : {} 
-{
+void Vozvrat() : {} {
+    Dvoichnaya()
+}
+
+void Pusto() : {} {
     Funktsyia()
 }

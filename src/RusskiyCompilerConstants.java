@@ -35,43 +35,59 @@ public interface RusskiyCompilerConstants {
   /** RegularExpression Id. */
   int OU = 18;
   /** RegularExpression Id. */
-  int IDENTIFIER = 19;
+  int TRUE = 19;
   /** RegularExpression Id. */
-  int NUMBER = 20;
+  int FALSE = 20;
   /** RegularExpression Id. */
-  int PLUS = 21;
+  int IDENTIFIER = 21;
   /** RegularExpression Id. */
-  int INC = 22;
+  int NUMBER = 22;
   /** RegularExpression Id. */
-  int MINUS = 23;
+  int PLUS = 23;
   /** RegularExpression Id. */
-  int DEC = 24;
+  int INC = 24;
   /** RegularExpression Id. */
-  int MULT = 25;
+  int MINUS = 25;
   /** RegularExpression Id. */
-  int DIVINT = 26;
+  int DEC = 26;
   /** RegularExpression Id. */
-  int DIV = 27;
+  int MULT = 27;
   /** RegularExpression Id. */
-  int POW = 28;
+  int DIVINT = 28;
   /** RegularExpression Id. */
-  int MOD = 29;
+  int DIV = 29;
   /** RegularExpression Id. */
-  int LPAREN = 30;
+  int POW = 30;
   /** RegularExpression Id. */
-  int RPAREN = 31;
+  int MOD = 31;
   /** RegularExpression Id. */
-  int SEMICOLON = 32;
+  int LPAREN = 32;
   /** RegularExpression Id. */
-  int COMMA = 33;
+  int RPAREN = 33;
   /** RegularExpression Id. */
-  int LBRACE = 34;
+  int SEMICOLON = 34;
   /** RegularExpression Id. */
-  int RBRACE = 35;
+  int COMMA = 35;
   /** RegularExpression Id. */
-  int DOT = 36;
+  int LBRACE = 36;
   /** RegularExpression Id. */
-  int ASSIGN = 37;
+  int RBRACE = 37;
+  /** RegularExpression Id. */
+  int DOT = 38;
+  /** RegularExpression Id. */
+  int EQ = 39;
+  /** RegularExpression Id. */
+  int NEQ = 40;
+  /** RegularExpression Id. */
+  int LT = 41;
+  /** RegularExpression Id. */
+  int GT = 42;
+  /** RegularExpression Id. */
+  int LEQ = 43;
+  /** RegularExpression Id. */
+  int GEQ = 44;
+  /** RegularExpression Id. */
+  int ASSIGN = 45;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -97,6 +113,8 @@ public interface RusskiyCompilerConstants {
     "\"vvod\"",
     "\"/i\"",
     "\"ili\"",
+    "\"true\"",
+    "\"false\"",
     "<IDENTIFIER>",
     "<NUMBER>",
     "\"+\"",
@@ -115,6 +133,12 @@ public interface RusskiyCompilerConstants {
     "\"{\"",
     "\"}\"",
     "\".\"",
+    "\"==\"",
+    "\"!=\"",
+    "\"<\"",
+    "\">\"",
+    "\"<=\"",
+    "\">=\"",
     "\"=\"",
   };
 
