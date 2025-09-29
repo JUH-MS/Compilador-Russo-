@@ -60,8 +60,8 @@ TOKEN : {
   | < E             : "/i"                  >
   | < OU            : "ili"                 >
 
-  | < TRUE          : "true"                >
-  | < FALSE         : "false"               >
+  | < TRUE          : "pravda"              >
+  | < FALSE         : "nepravda"            >
 
   | < IDENTIFIER    : (["a"-"z","A"-"Z"])+  >
   | < NUMBER        : (["0"-"9"])+          >
