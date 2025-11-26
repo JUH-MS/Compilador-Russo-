@@ -10,7 +10,7 @@ public class RusskiyCompiler {
 
         while (rodando) {
             System.out.println("Nachalo");
-            System.out.println("Digite sua frase e vamos ver se até Dostoiévski aprovaria.");
+            System.out.println("Digite sua frase e vamos ver se Dostoiévski aprovaria.");
             try {
                 parser.Programa();
                 System.out.println("✔ Código aceito com sucesso!");
@@ -123,12 +123,16 @@ void Comando() : {} {
 }
 
 void Condicional() : {} {
-    LOOKAHEAD(2)
-    <IF> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-    [ <ELSE> <LBRACE> ListaDeComandos() <RBRACE> ]
-  | LOOKAHEAD(1)
-    <ELSE> <LBRACE> ListaDeComandos() <RBRACE>
+    <IF> 
+    <LPAREN> Frase() <RPAREN> 
+    <LBRACE> ListaDeComandos() <RBRACE>
+
+    [
+        <ELSE>
+        <LBRACE> ListaDeComandos() <RBRACE>
+    ]
 }
+
 
 void Iteracao() : {} {
     <WHILE> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
