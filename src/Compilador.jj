@@ -4,6 +4,31 @@ options {
 
 PARSER_BEGIN(RusskiyCompiler)
 public class RusskiyCompiler {
+public static void main(String[] args) throws Exception {
+
+    if (args.length == 0) {
+        System.out.println("Uso: java RusskiyCompiler <arquivo>");
+        return;
+    }
+
+    FileInputStream fis = new FileInputStream(args[0]);
+    RusskiyCompiler parser = new RusskiyCompiler(fis);
+
+    try {
+        parser.Programa();
+        System.out.println("✔ Arquivo aceito!");
+    } catch (ParseException e) {
+        System.out.println("❌ Erro sintático:");
+        System.out.println(e.getMessage());
+    } catch (TokenMgrError e) {
+        System.out.println("❌ Erro léxico:");
+        System.out.println(e.getMessage());
+    }
+}
+}
+
+/* Main anterior; foi substituída pela de cima que permite leitura de arquivos
+public class RusskiyCompiler {
     public static void main(String args[]) throws Exception {
         RusskiyCompiler parser = new RusskiyCompiler(System.in);
         boolean rodando = true;
@@ -29,7 +54,8 @@ public class RusskiyCompiler {
             }
         }
     }
-}
+}*/
+
 PARSER_END(RusskiyCompiler)
 
 SKIP : {
