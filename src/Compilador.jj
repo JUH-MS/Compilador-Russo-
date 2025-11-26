@@ -4,58 +4,28 @@ options {
 
 PARSER_BEGIN(RusskiyCompiler)
 public class RusskiyCompiler {
-public static void main(String[] args) throws Exception {
 
-    if (args.length == 0) {
-        System.out.println("Uso: java RusskiyCompiler <arquivo>");
-        return;
-    }
+    public static void main(String[] args) throws Exception {
+        if (args.length == 0) {
+            System.out.println("Uso: java RusskiyCompiler <arquivo>");
+            return;
+        }
 
-    FileInputStream fis = new FileInputStream(args[0]);
-    RusskiyCompiler parser = new RusskiyCompiler(fis);
+        FileInputStream fis = new FileInputStream(args[0]);
+        RusskiyCompiler parser = new RusskiyCompiler(fis);
 
-    try {
-        parser.Programa();
-        System.out.println("✔ Arquivo aceito!");
-    } catch (ParseException e) {
-        System.out.println("❌ Erro sintático:");
-        System.out.println(e.getMessage());
-    } catch (TokenMgrError e) {
-        System.out.println("❌ Erro léxico:");
-        System.out.println(e.getMessage());
-    }
-}
-}
-
-/* Main anterior; foi substituída pela de cima que permite leitura de arquivos
-public class RusskiyCompiler {
-    public static void main(String args[]) throws Exception {
-        RusskiyCompiler parser = new RusskiyCompiler(System.in);
-        boolean rodando = true;
-
-        while (rodando) {
-            System.out.println("Nachalo");
-            System.out.println("Digite sua frase e vamos ver se Dostoiévski aprovaria.");
-            try {
-                parser.Programa();
-                System.out.println("✔ Código aceito com sucesso!");
-            } catch (ParseException e) {
-                System.out.println("Frase inválida! Stalin não aprovaria essa sintaxe.");
-                System.out.println("Detalhes: " + e.getMessage());
-                parser.ReInit(System.in);
-            } catch (TokenMgrError e) {
-                System.out.println("Erro léxico: caractere inválido.");
-                System.out.println("Mensagem: " + e.getMessage());
-                parser.ReInit(System.in);
-            } catch (Exception e) {
-                System.out.println("Erro inesperado.");
-                System.out.println("Mensagem: " + e.getMessage());
-                rodando = false;
-            }
+        try {
+            parser.Programa();
+            System.out.println("✔ Código aceito!");
+        } catch (ParseException e) {
+            System.out.println("❌ Erro sintático:");
+            System.out.println(e.getMessage());
+        } catch (TokenMgrError e) {
+            System.out.println("❌ Erro léxico:");
+            System.out.println(e.getMessage());
         }
     }
-}*/
-
+}
 PARSER_END(RusskiyCompiler)
 
 SKIP : {
@@ -106,24 +76,31 @@ TOKEN : {
   | < ASSIGN        : "="                   >
 }
 
+// ======== GRAMÁTICA ========
+
 void Programa() : {} {
+    System.out.println("Programa");
     Vvod() <EOF>
 }
 
 void Vvod() : {} {
+    System.out.println("Vvod");
     ListaDeDeclaracoes()
     ListaDeComandos()
 }
 
 void ListaDeDeclaracoes() : {} {
+    System.out.println("ListaDeDeclaracoes");
     ( Declaracao() )*
 }
 
 void ListaDeComandos() : {} {
+    System.out.println("ListaDeComandos");
     ( Comando() )*
 }
 
 void Declaracao() : {} {
+    System.out.println("Declaracao");
     TipoEspecificador()
     Identificador()
     OpcionalInicializacao()
@@ -131,10 +108,12 @@ void Declaracao() : {} {
 }
 
 void OpcionalInicializacao() : {} {
+    System.out.println("OpcionalInicializacao");
     [ <ASSIGN> Expressao() ]
 }
 
 void TipoEspecificador() : {} {
+    System.out.println("TipoEspecificador");
       <VOID>
     | <INT>
     | <FLOAT>
@@ -142,6 +121,7 @@ void TipoEspecificador() : {} {
 }
 
 void Comando() : {} {
+    System.out.println("Comando");
       Condicional()
     | Iteracao()
     | FraseFinalizada()
@@ -149,64 +129,64 @@ void Comando() : {} {
 }
 
 void Condicional() : {} {
+    System.out.println("Condicional");
     <IF> 
     <LPAREN> Frase() <RPAREN> 
     <LBRACE> ListaDeComandos() <RBRACE>
-
-    [
-        <ELSE>
-        <LBRACE> ListaDeComandos() <RBRACE>
-    ]
+    [ <ELSE> <LBRACE> ListaDeComandos() <RBRACE> ]
 }
 
-
 void Iteracao() : {} {
-    <WHILE> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-  | <FOR> <LPAREN> Frase() <SEMICOLON> Frase() <SEMICOLON> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+    System.out.println("Iteracao");
+    (
+        <WHILE> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+      | <FOR> <LPAREN> Frase() <SEMICOLON> Frase() <SEMICOLON> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+    )
 }
 
 void FraseFinalizada() : {} {
-    LOOKAHEAD(2)
-    Frase() <SEMICOLON>
+    System.out.println("FraseFinalizada");
+    LOOKAHEAD(2) Frase() <SEMICOLON>
   | LOOKAHEAD(1)
     Frase() {
-        System.out.println("Meu camarada Russo, um programa sem ';' é como uma vodka pela metade, não acabou.");
+        System.out.println("⚠ Frase sem ';' finalizada automaticamente");
         while (getToken(1).kind != SEMICOLON &&
                getToken(1).kind != RBRACE &&
                getToken(1).kind != 0) {
             getNextToken();
         }
-        if (getToken(1).kind == SEMICOLON) {
-            getNextToken();
-        }
+        if (getToken(1).kind == SEMICOLON) getNextToken();
     }
 }
 
 void Frase() : {} {
+    System.out.println("Frase");
     LOOKAHEAD(3) Atribuicao()
   | Termo()
 }
 
 void Atribuicao() : {} {
+    System.out.println("Atribuicao");
     LOOKAHEAD(3)
     Identificador() <ASSIGN> Expressao()
   | Identificador() OperadorIncdec()
 }
 
 void Expressao() : {} {
+    System.out.println("Expressao");
     Termo() ( OperadorBinario() Termo() )*
 }
 
-void Termo() : {} 
-{
+void Termo() : {} {
+    System.out.println("Termo");
       Identificador()
     | Numero()
     | <STRING_VALUE>
     | <LPAREN> Expressao() <RPAREN>
 }
 
-void OperadorBinario() : {} 
-{
+void OperadorBinario() : {} {
+    System.out.println("OperadorBinario");
       <PLUS>
     | <MINUS>
     | <MULT>
@@ -217,44 +197,39 @@ void OperadorBinario() : {}
     | <OU>
 }
 
-void Identificador() : {} 
-{
+void Identificador() : {} {
+    System.out.println("Identificador");
     <IDENTIFIER>
 }
 
-void Numero() : {} 
-{
+void Numero() : {} {
+    System.out.println("Numero");
     <NUMBER>
 }
 
-void OperadorIncdec() : {} 
-{
+void OperadorIncdec() : {} {
+    System.out.println("OperadorIncdec");
       <INC>
     | <DEC>
 }
 
-void Vyvod() : {} 
-{
-    <PRINT> <LPAREN> 
-    ListaDeArgumentos() 
-    <RPAREN> <SEMICOLON>
-    {
-        System.out.println("✔ Comando de saída reconhecido com sucesso!");
-    }
+void Vyvod() : {} {
+    System.out.println("Vyvod");
+    <PRINT> <LPAREN> ListaDeArgumentos() <RPAREN> <SEMICOLON>
 }
 
-void ListaDeArgumentos() : {} 
-{
-    ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) 
+void ListaDeArgumentos() : {} {
+    System.out.println("ListaDeArgumentos");
+    ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> )
     ( <COMMA> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) )*
 }
 
-void Funktsyia() : {} 
-{
+void Funktsyia() : {} {
+    System.out.println("Funktsyia");
     Identificador() <LPAREN> ( <IDENTIFIER> ( <COMMA> <IDENTIFIER> )* )? <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
 }
 
-void Pusto() : {} 
-{
+void Pusto() : {} {
+    System.out.println("Pusto");
     Funktsyia()
 }
