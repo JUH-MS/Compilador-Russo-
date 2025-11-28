@@ -2,12 +2,13 @@ import java.awt.*;
 import java.io.*;
 import java.nio.file.*;
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 public class InterfaceCompilador extends JFrame {
 
     private JTextArea editorArea;
-    private JTextArea tokensArea;
-    private JTextArea errosArea;
+    private JTextPane painelGeral;
     private JTextArea arvoreArea;
 
     public InterfaceCompilador() {
@@ -17,36 +18,39 @@ public class InterfaceCompilador extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        //area onde o usuario coda
+        // área de código
         editorArea = new JTextArea();
         editorArea.setFont(new Font("Consolas", Font.PLAIN, 16));
 
-        //paineis laterais
-        tokensArea = new JTextArea();
-        tokensArea.setEditable(false);
+        LineNumberPanel lineNumbers = new LineNumberPanel(editorArea);
+        JScrollPane scrollEditor = new JScrollPane(editorArea);
+        scrollEditor.setRowHeaderView(lineNumbers);
 
-        errosArea = new JTextArea();
-        errosArea.setEditable(false);
+        // painel geral (HTML)
+        painelGeral = new JTextPane();
+        painelGeral.setContentType("text/html");
+        painelGeral.setEditable(false);
 
+        JScrollPane scrollGeral = new JScrollPane(painelGeral);
+
+        // árvore sintática
         arvoreArea = new JTextArea();
         arvoreArea.setEditable(false);
+        JScrollPane scrollArvore = new JScrollPane(arvoreArea);
 
-        //scrolls
-        JScrollPane scrollEditor  = new JScrollPane(editorArea);
-        JScrollPane scrollTokens  = new JScrollPane(tokensArea);
-        JScrollPane scrollErros   = new JScrollPane(errosArea);
-        JScrollPane scrollArvore  = new JScrollPane(arvoreArea);
-
-        //painel direito (tokens + erros + arvore)
-        JTabbedPane painelDireita = new JTabbedPane();
-        painelDireita.add("Tokens", scrollTokens);
-        painelDireita.add("Erros", scrollErros);
-        painelDireita.add("Árvore Sintática", scrollArvore);
+        // painel inferior horizontal
+        JSplitPane painelInferior = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                scrollGeral,
+                scrollArvore
+        );
+        painelInferior.setDividerLocation(450);
+        painelInferior.setResizeWeight(0.6);
 
         add(scrollEditor, BorderLayout.CENTER);
-        add(painelDireita, BorderLayout.EAST);
+        add(painelInferior, BorderLayout.SOUTH);
 
-        //botoes inferiores
+        // botões
         JButton compilarBtn = new JButton("Compilar");
         compilarBtn.addActionListener(e -> compilarCodigo());
 
@@ -57,7 +61,7 @@ public class InterfaceCompilador extends JFrame {
         painelBotoes.add(compilarBtn);
         painelBotoes.add(abrirBtn);
 
-        add(painelBotoes, BorderLayout.SOUTH);
+        add(painelBotoes, BorderLayout.NORTH);
 
         setVisible(true);
     }
@@ -71,7 +75,8 @@ public class InterfaceCompilador extends JFrame {
                 String texto = Files.readString(chooser.getSelectedFile().toPath());
                 editorArea.setText(texto);
             } catch (Exception ex) {
-                errosArea.setText("Erro ao abrir arquivo:\n" + ex.getMessage());
+                painelGeral.setText("<html><span style='color:red;'>Erro ao abrir arquivo:<br>" 
+                                    + ex.getMessage() + "</span></html>");
             }
         }
     }
@@ -86,32 +91,83 @@ public class InterfaceCompilador extends JFrame {
             FileInputStream fis = new FileInputStream(temp);
             RusskiyCompiler parser = new RusskiyCompiler(fis);
     
-            errosArea.setText("");
-            tokensArea.setText("");
+            painelGeral.setText("");
             arvoreArea.setText("");
     
-            //redireciona a saída do parser para arvoreArea
+            // redireciona saída do parser
             PrintStream printStream = new PrintStream(new OutputStream() {
                 @Override
                 public void write(int b) {
                     arvoreArea.append(String.valueOf((char) b));
                 }
             });
+
             System.setOut(printStream);
             System.setErr(printStream);
     
-            parser.Programa();  //executa o parser
-            errosArea.setText("✔ Código aceito!");
+            parser.Programa();
+    
+            painelGeral.setText("<html><span style='color:green;'>✔ Código aceito!</span></html>");
     
         } catch (ParseException e) {
-            errosArea.setText("Erro de sintaxe:\n" + e.getMessage());
+            painelGeral.setText("<html><span style='color:red;'>Erro de sintaxe:<br>" 
+                                + e.getMessage() + "</span></html>");
         } catch (TokenMgrError e) {
-            errosArea.setText("Erro léxico:\n" + e.getMessage());
+            painelGeral.setText("<html><span style='color:red;'>Erro léxico:<br>" 
+                                + e.getMessage() + "</span></html>");
         } catch (Exception e) {
-            errosArea.setText("Erro inesperado:\n" + e.getMessage());
+            painelGeral.setText("<html><span style='color:red;'>Erro inesperado:<br>" 
+                                + e.getMessage() + "</span></html>");
         }
     }
+
     public static void main(String[] args) {
         new InterfaceCompilador();
+    }
+}
+
+
+// painel de numeração de linhas
+class LineNumberPanel extends JPanel implements DocumentListener {
+
+    private final JTextArea textArea;
+    private final Font font = new Font("Consolas", Font.PLAIN, 14);
+
+    public LineNumberPanel(JTextArea textArea) {
+        this.textArea = textArea;
+        textArea.getDocument().addDocumentListener(this);
+        setPreferredSize(new Dimension(40, Integer.MAX_VALUE));
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        g.setFont(font);
+        FontMetrics fm = g.getFontMetrics();
+
+        int lineHeight = fm.getHeight();
+        int start = textArea.getInsets().top;
+        int lineCount = textArea.getLineCount();
+
+        for (int i = 0; i < lineCount; i++) {
+            int y = start + i * lineHeight + fm.getAscent();
+            g.drawString(String.valueOf(i + 1), 5, y);
+        }
+    }
+
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+        repaint();
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+        repaint();
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+        repaint();
     }
 }
