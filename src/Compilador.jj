@@ -1,29 +1,32 @@
 options {
-    STATIC = false;
+  STATIC = false;
 }
 
 PARSER_BEGIN(RusskiyCompiler)
+import java.io.*;
+
 public class RusskiyCompiler {
-
-    public static void main(String[] args) throws Exception {
-        if (args.length == 0) {
-            System.out.println("Uso: java RusskiyCompiler <arquivo>");
-            return;
-        }
-
-        FileInputStream fis = new FileInputStream(args[0]);
-        RusskiyCompiler parser = new RusskiyCompiler(fis);
-
+    public static void main(String args[]) throws ParseException {
+      RusskiyCompiler parser = new RusskiyCompiler(System.in);
+      
+      while (true) {
+        System.out.println("------------------------------------------------");
+        System.out.println("Nachalo - Compilador Russo (Digite ou CTRL+C para sair):");
+        System.out.print("> ");
+        
         try {
             parser.Programa();
-            System.out.println("✔ Código aceito!");
+            System.out.println("✔ Código aceito (Slava Russkiy)!");
         } catch (ParseException e) {
             System.out.println("❌ Erro sintático:");
             System.out.println(e.getMessage());
+            parser.ReInit(System.in);
         } catch (TokenMgrError e) {
             System.out.println("❌ Erro léxico:");
             System.out.println(e.getMessage());
+            parser.ReInit(System.in);
         }
+      }
     }
 }
 PARSER_END(RusskiyCompiler)
@@ -32,204 +35,199 @@ SKIP : {
     " " | "\t" | "\n" | "\r"
 }
 
+// --- Comentários ---
 MORE : {
-    < "#" (~["\n","\r"])* > : DEFAULT
+    "ili" : IN_SINGLE_LINE_COMMENT
+}
+<IN_SINGLE_LINE_COMMENT> SKIP : {
+    < ~["\n","\r"] >
+}
+<IN_SINGLE_LINE_COMMENT> SKIP : {
+    < ("\n"|"\r"|"\r\n") > : DEFAULT
 }
 
+// =============================
+// Tokens
+// =============================
 TOKEN : {
-    < VOID          : "pusto"               >
-  | < INT           : "tseloye"             >
-  | < FLOAT         : "drobnoye"            >
-  | < STRING_TYPE   : "slova"               >
-  | < STRING_VALUE  : "\"" (~["\""])* "\""  >
+  // --- Palavras-Chave ---
+    < VOID      : "pusto"                > 
+  | < INT       : "tseloye"              > 
+  | < FLOAT     : "drobnoye"             > 
+  | < STRING    : "slova"                > 
+  | < IF        : "yesli"                > 
+  | < ELSE      : "inache"               > 
+  | < FOR       : "kazhday"              > 
+  | < WHILE     : "poka"                 > 
+  | < PRINT     : "vyvod"                > 
+  | < INPUT     : "vvod"                 > 
 
-  | < IF            : "yesli"               >
-  | < ELSE          : "inache"              >
-  | < FOR           : "kazhday"             >
-  | < WHILE         : "poka"                >
-  | < PRINT         : "vyvod"               >
-  | < INPUT         : "vvod"                >
-  | < E             : "/i"                  >
-  | < OU            : "ili"                 >
+  // --- Operadores Compostos ---
+  | < EQ        : "=="                   > 
+  | < NEQ       : "!="                   > 
+  | < LE        : "<="                   > 
+  | < GE        : ">="                   > 
+  | < INC       : "++"                   > 
+  | < DEC       : "--"                   > 
+  | < POW       : "**"                   > 
+  | < DIVINT    : "//"                   > 
 
-  | < IDENTIFIER    : (["a"-"z","A"-"Z"])+  >
-  | < NUMBER        : (["0"-"9"])+          >
+  // --- Operadores Simples ---
+  | < ASSIGN    : "="                    > 
+  | < GT        : ">"                    > 
+  | < LT        : "<"                    > 
+  | < PLUS      : "+"                    > 
+  | < MINUS     : "-"                    > 
+  | < MULT      : "*"                    > 
+  | < DIV       : "/"                    > 
+  | < MOD       : "%"                    > 
 
-  | < PLUS          : "+"                   >
-  | < INC           : "++"                  >
-  | < MINUS         : "-"                   >
-  | < DEC           : "--"                  >
-  | < MULT          : "*"                   >
-  | < DIVINT        : "//"                  >
-  | < DIV           : "/"                   >
-  | < POW           : "**"                  >
-  | < MOD           : "%"                   >
+  // --- Pontuação ---
+  | < LPAREN    : "("                    >
+  | < RPAREN    : ")"                    >
+  | < LBRACE    : "{"                    >
+  | < RBRACE    : "}"                    >
+  | < SEMICOLON : ";"                    >
+  | < COMMA     : ","                    >
+  | < DOT       : "."                    >
 
-  | < LPAREN        : "("                   >
-  | < RPAREN        : ")"                   >
-  | < SEMICOLON     : ";"                   >
-  | < COMMA         : ","                   >
-  | < LBRACE        : "{"                   >
-  | < RBRACE        : "}"                   >
-  | < DOT           : "."                   >
-
-  | < ASSIGN        : "="                   >
+  // --- Literais ---
+  | < IDENTIFIER : ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+  | < NUMBER     : (["0"-"9"])+ ( "." (["0"-"9"])+ )? >
+  | < STRING_LITERAL : "\"" (~["\"","\n","\r"])* "\"" >
 }
 
-// ======== GRAMÁTICA ========
+// =============================
+// Gramática
+// =============================
 
-void Programa() : {} {
-    System.out.println("Programa");
-    Vvod() <EOF>
+void Programa() : {}
+{
+    ( Comando() )* <EOF>
 }
 
-void Vvod() : {} {
-    System.out.println("Vvod");
-    ListaDeDeclaracoes()
-    ListaDeComandos()
+void Comando() : {}
+{
+    Condicional()
+  | Iteracao()
+  | IO()               
+  | Declaracao()       
+  | FraseFinalizada()  
 }
 
-void ListaDeDeclaracoes() : {} {
-    System.out.println("ListaDeDeclaracoes");
-    ( Declaracao() )*
+// --- Entrada e Saída (IO) ---
+
+void IO() : {}
+{
+    <PRINT> <LPAREN> Expressao() <RPAREN> <SEMICOLON>
+    |
+    <INPUT> <LPAREN> Identificador() <RPAREN> <SEMICOLON>
 }
 
-void ListaDeComandos() : {} {
-    System.out.println("ListaDeComandos");
-    ( Comando() )*
+// --- Estrutura de Frases e Atribuição ---
+
+void FraseFinalizada() : {}
+{
+    Frase() <SEMICOLON>
 }
 
-void Declaracao() : {} {
-    System.out.println("Declaracao");
-    TipoEspecificador()
-    Identificador()
-    OpcionalInicializacao()
-    <SEMICOLON>
+void Frase() : {}
+{
+    Expressao() 
+    (
+        <ASSIGN> Expressao() 
+      | 
+        <INC>
+      | 
+        <DEC>
+    )?
 }
 
-void OpcionalInicializacao() : {} {
-    System.out.println("OpcionalInicializacao");
+// --- Declaração de Variáveis ---
+
+void Declaracao() : {}
+{
+    TipoEspecificador() Identificador() OpcionalInicializacao() <SEMICOLON>
+}
+
+void OpcionalInicializacao() : {}
+{
     [ <ASSIGN> Expressao() ]
 }
 
-void TipoEspecificador() : {} {
-    System.out.println("TipoEspecificador");
-      <VOID>
-    | <INT>
-    | <FLOAT>
-    | <STRING_TYPE>
+void TipoEspecificador() : {}
+{
+    <VOID> | <INT> | <FLOAT> | <STRING>
 }
 
-void Comando() : {} {
-    System.out.println("Comando");
-      Condicional()
-    | Iteracao()
-    | FraseFinalizada()
-    | Vyvod()
+// --- Estruturas de Controle ---
+
+void Condicional() : {}
+{
+    <IF> <LPAREN> Expressao() <RPAREN> <LBRACE> ( Comando() )* <RBRACE> 
+    [ <ELSE> <LBRACE> ( Comando() )* <RBRACE> ]
 }
 
-void Condicional() : {} {
-    System.out.println("Condicional");
-    <IF> 
-    <LPAREN> Frase() <RPAREN> 
-    <LBRACE> ListaDeComandos() <RBRACE>
-    [ <ELSE> <LBRACE> ListaDeComandos() <RBRACE> ]
+void Iteracao() : {}
+{
+    <WHILE> <LPAREN> Expressao() <RPAREN> <LBRACE> ( Comando() )* <RBRACE>
 }
 
-void Iteracao() : {} {
-    System.out.println("Iteracao");
-    (
-        <WHILE> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-      | <FOR> <LPAREN> Frase() <SEMICOLON> Frase() <SEMICOLON> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-    )
+// --- Expressões ---
+
+void Expressao() : {} 
+{
+    ExpressaoRelacional()
 }
 
-void FraseFinalizada() : {} {
-    System.out.println("FraseFinalizada");
-    LOOKAHEAD(2) Frase() <SEMICOLON>
-  | LOOKAHEAD(1)
-    Frase() {
-        System.out.println("⚠ Frase sem ';' finalizada automaticamente");
-        while (getToken(1).kind != SEMICOLON &&
-               getToken(1).kind != RBRACE &&
-               getToken(1).kind != 0) {
-            getNextToken();
-        }
-        if (getToken(1).kind == SEMICOLON) getNextToken();
-    }
+void ExpressaoRelacional() : {}
+{
+    ExpressaoAditiva() 
+    ( 
+      ( <EQ> | <NEQ> | <GT> | <LT> | <GE> | <LE> ) 
+      ExpressaoAditiva() 
+    )*
 }
 
-void Frase() : {} {
-    System.out.println("Frase");
-    LOOKAHEAD(3) Atribuicao()
-  | Termo()
+void ExpressaoAditiva() : {} 
+{
+    ExpressaoMultiplicativa() 
+    ( 
+      ( <PLUS> | <MINUS> ) 
+      ExpressaoMultiplicativa() 
+    )*
 }
 
-void Atribuicao() : {} {
-    System.out.println("Atribuicao");
-    LOOKAHEAD(3)
-    Identificador() <ASSIGN> Expressao()
-  | Identificador() OperadorIncdec()
+void ExpressaoMultiplicativa() : {} 
+{
+    Termo() 
+    ( 
+      ( <MULT> | <DIV> | <DIVINT> | <MOD> | <POW> ) 
+      Termo() 
+    )*
 }
 
-void Expressao() : {} {
-    System.out.println("Expressao");
-    Termo() ( OperadorBinario() Termo() )*
+void Termo() : {}
+{
+    Identificador()
+  | Numero()
+  | StringLiteral()    
+  | <LPAREN> Expressao() <RPAREN>
 }
 
-void Termo() : {} {
-    System.out.println("Termo");
-      Identificador()
-    | Numero()
-    | <STRING_VALUE>
-    | <LPAREN> Expressao() <RPAREN>
-}
+// --- Wrappers de Tokens ---
 
-void OperadorBinario() : {} {
-    System.out.println("OperadorBinario");
-      <PLUS>
-    | <MINUS>
-    | <MULT>
-    | <DIV>
-    | <MOD>
-    | <POW>
-    | <E>
-    | <OU>
-}
-
-void Identificador() : {} {
-    System.out.println("Identificador");
+void Identificador() : {}
+{
     <IDENTIFIER>
 }
 
-void Numero() : {} {
-    System.out.println("Numero");
+void Numero() : {}
+{
     <NUMBER>
 }
 
-void OperadorIncdec() : {} {
-    System.out.println("OperadorIncdec");
-      <INC>
-    | <DEC>
-}
-
-void Vyvod() : {} {
-    System.out.println("Vyvod");
-    <PRINT> <LPAREN> ListaDeArgumentos() <RPAREN> <SEMICOLON>
-}
-
-void ListaDeArgumentos() : {} {
-    System.out.println("ListaDeArgumentos");
-    ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> )
-    ( <COMMA> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> ) )*
-}
-
-void Funktsyia() : {} {
-    System.out.println("Funktsyia");
-    Identificador() <LPAREN> ( <IDENTIFIER> ( <COMMA> <IDENTIFIER> )* )? <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-}
-
-void Pusto() : {} {
-    System.out.println("Pusto");
-    Funktsyia()
+void StringLiteral() : {}
+{
+    <STRING_LITERAL>
 }
