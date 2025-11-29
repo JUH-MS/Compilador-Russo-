@@ -97,137 +97,206 @@ TOKEN : {
   | < STRING_LITERAL : "\"" (~["\"","\n","\r"])* "\"" >
 }
 
+/// =============================
+// Gramática 
 // =============================
-// Gramática
-// =============================
 
-void Programa() : {}
+void Programa() : { No raiz = new No("PROGRAMA"); No filho; }
 {
-    ( Comando() )* <EOF>
+    ( 
+      filho = Comando() 
+      { raiz.addFilho(filho); }
+    )* <EOF>
+
+    { 
+        System.out.println("\n=== ÁRVORE SINTÁTICA ===\n");
+        raiz.imprimir("", true); 
+    }
 }
 
-void Comando() : {}
+No Comando() : { No n; }
 {
-    Condicional()
-  | Iteracao()
-  | IO()               
-  | Declaracao()       
-  | FraseFinalizada()  
-}
-
-// --- Entrada e Saída (IO) ---
-
-void IO() : {}
-{
-    <PRINT> <LPAREN> Expressao() <RPAREN> <SEMICOLON>
-    |
-    <INPUT> <LPAREN> Identificador() <RPAREN> <SEMICOLON>
-}
-
-// --- Estrutura de Frases e Atribuição ---
-
-void FraseFinalizada() : {}
-{
-    Frase() <SEMICOLON>
-}
-
-void Frase() : {}
-{
-    Expressao() 
     (
-        <ASSIGN> Expressao() 
+      n = Condicional() 
+    | n = Iteracao()
+    | n = IO()
+    | n = Declaracao()
+    | n = FraseFinalizada()
+    )
+    { return n; }
+}
+
+No IO() : { No n = new No("IO"); No expr; Token t; }
+{
+    <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
+    { 
+        n.addFilho(new No("Comando", "vyvod"));
+        n.addFilho(expr);
+        return n; 
+    }
+    |
+    <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
+    { 
+        n.addFilho(new No("Comando", "vvod"));
+        n.addFilho(new No("Var", t.image));
+        return n; 
+    }
+}
+
+No FraseFinalizada() : { No n; }
+{
+    n = Frase() <SEMICOLON>
+    { return n; }
+}
+
+No Frase() : { No expr; No n = new No("Frase"); Token t; No atrib; }
+{
+    expr = Expressao() 
+    (
+        // Atribuição
+        <ASSIGN> atrib = Expressao()
+        { 
+             n = new No("Atribuicao");
+             n.addFilho(expr); // Variável
+             n.addFilho(new No("Operador", "="));
+             n.addFilho(atrib); // Valor
+             return n;
+        }
       | 
+        // Incremento
         <INC>
+        {
+             n = new No("Incremento");
+             n.addFilho(expr);
+             return n;
+        }
       | 
+        // Decremento
         <DEC>
+        {
+             n = new No("Decremento");
+             n.addFilho(expr);
+             return n;
+        }
     )?
+    
+    { return expr; }
 }
 
-// --- Declaração de Variáveis ---
-
-void Declaracao() : {}
+No Declaracao() : { No n = new No("Declaracao"); No tipo; Token t; No inic = null; }
 {
-    TipoEspecificador() Identificador() OpcionalInicializacao() <SEMICOLON>
+    tipo = TipoEspecificador() t=<IDENTIFIER> inic = OpcionalInicializacao() <SEMICOLON>
+    {
+        n.addFilho(tipo);
+        n.addFilho(new No("Var", t.image));
+        if (inic != null) {
+            n.addFilho(new No("Inicializacao"));
+            n.addFilho(inic);
+        }
+        return n;
+    }
 }
 
-void OpcionalInicializacao() : {}
+No OpcionalInicializacao() : { No expr = null; }
 {
-    [ <ASSIGN> Expressao() ]
+    [ <ASSIGN> expr = Expressao() ]
+    { return expr; }
 }
 
-void TipoEspecificador() : {}
+No TipoEspecificador() : { Token t; }
 {
-    <VOID> | <INT> | <FLOAT> | <STRING>
+    ( t=<VOID> | t=<INT> | t=<FLOAT> | t=<STRING> )
+    { return new No("Tipo", t.image); }
 }
 
-// --- Estruturas de Controle ---
-
-void Condicional() : {}
+No Condicional() : { No n = new No("IF"); No cond; No cmd; }
 {
-    <IF> <LPAREN> Expressao() <RPAREN> <LBRACE> ( Comando() )* <RBRACE> 
-    [ <ELSE> <LBRACE> ( Comando() )* <RBRACE> ]
+    <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE> 
+    { 
+        n.addFilho(cond); 
+        No blocoIf = new No("Bloco True");
+    }
+    ( cmd=Comando() { blocoIf.addFilho(cmd); } )* <RBRACE>
+    { n.addFilho(blocoIf); }
+    
+    [ 
+      <ELSE> <LBRACE> 
+      { No blocoElse = new No("Bloco Else"); }
+      ( cmd=Comando() { blocoElse.addFilho(cmd); } )* <RBRACE> 
+      { n.addFilho(blocoElse); }
+    ]
+    
+    { return n; }
 }
 
-void Iteracao() : {}
+No Iteracao() : { No n = new No("WHILE"); No cond; No cmd; }
 {
-    <WHILE> <LPAREN> Expressao() <RPAREN> <LBRACE> ( Comando() )* <RBRACE>
+    <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
+    { n.addFilho(cond); No bloco = new No("Bloco Loop"); }
+    ( cmd=Comando() { bloco.addFilho(cmd); } )* <RBRACE>
+    { 
+        n.addFilho(bloco); 
+        return n; 
+    }
 }
 
-// --- Expressões ---
-
-void Expressao() : {} 
+No Expressao() : { No n; } 
 {
-    ExpressaoRelacional()
+    n = ExpressaoRelacional() { return n; }
 }
 
-void ExpressaoRelacional() : {}
+No ExpressaoRelacional() : { No atual, prox; Token op; }
 {
-    ExpressaoAditiva() 
+    atual = ExpressaoAditiva() 
     ( 
-      ( <EQ> | <NEQ> | <GT> | <LT> | <GE> | <LE> ) 
-      ExpressaoAditiva() 
+      ( op=<EQ> | op=<NEQ> | op=<GT> | op=<LT> | op=<GE> | op=<LE> ) 
+      prox = ExpressaoAditiva() 
+      {
+          No novoPai = new No("Op.Relacional", op.image);
+          novoPai.addFilho(atual);
+          novoPai.addFilho(prox);
+          atual = novoPai;
+      }
     )*
+    { return atual; }
 }
 
-void ExpressaoAditiva() : {} 
+No ExpressaoAditiva() : { No atual, prox; Token op; } 
 {
-    ExpressaoMultiplicativa() 
+    atual = ExpressaoMultiplicativa() 
     ( 
-      ( <PLUS> | <MINUS> ) 
-      ExpressaoMultiplicativa() 
+      ( op=<PLUS> | op=<MINUS> ) 
+      prox = ExpressaoMultiplicativa() 
+      {
+          No novoPai = new No("Op.Aditivo", op.image);
+          novoPai.addFilho(atual);
+          novoPai.addFilho(prox);
+          atual = novoPai;
+      }
     )*
+    { return atual; }
 }
 
-void ExpressaoMultiplicativa() : {} 
+No ExpressaoMultiplicativa() : { No atual, prox; Token op; } 
 {
-    Termo() 
+    atual = Termo() 
     ( 
-      ( <MULT> | <DIV> | <DIVINT> | <MOD> | <POW> ) 
-      Termo() 
+      ( op=<MULT> | op=<DIV> | op=<DIVINT> | op=<MOD> | op=<POW> ) 
+      prox = Termo() 
+      {
+          No novoPai = new No("Op.Multiplicativo", op.image);
+          novoPai.addFilho(atual);
+          novoPai.addFilho(prox);
+          atual = novoPai;
+      }
     )*
+    { return atual; }
 }
 
-void Termo() : {}
+No Termo() : { Token t; No n; }
 {
-    Identificador()
-  | Numero()
-  | StringLiteral()    
-  | <LPAREN> Expressao() <RPAREN>
-}
-
-// --- Wrappers de Tokens ---
-
-void Identificador() : {}
-{
-    <IDENTIFIER>
-}
-
-void Numero() : {}
-{
-    <NUMBER>
-}
-
-void StringLiteral() : {}
-{
-    <STRING_LITERAL>
+    t=<IDENTIFIER> { return new No("Var", t.image); }
+  | t=<NUMBER>     { return new No("Num", t.image); }
+  | t=<STRING_LITERAL> { return new No("String", t.image); }
+  | <LPAREN> n=Expressao() <RPAREN> { return n; }
 }

@@ -26,11 +26,11 @@ public class RusskiyCompiler implements RusskiyCompilerConstants {
       }
     }
 
-// =============================
-// Gramática
+/// =============================
+// Gramática 
 // =============================
   final public 
-void Programa() throws ParseException {
+void Programa() throws ParseException {No raiz = new No("PROGRAMA"); No filho;
     label_1:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -53,38 +53,41 @@ void Programa() throws ParseException {
         jj_la1[0] = jj_gen;
         break label_1;
       }
-      Comando();
+      filho = Comando();
+raiz.addFilho(filho);
     }
     jj_consume_token(0);
+System.out.println("\n=== \u00c1RVORE SINT\u00c1TICA ===\n");
+        raiz.imprimir("", true);
 }
 
-  final public void Comando() throws ParseException {
+  final public No Comando() throws ParseException {No n;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case IF:{
-      Condicional();
+      n = Condicional();
       break;
       }
     case WHILE:{
-      Iteracao();
+      n = Iteracao();
       break;
       }
     case PRINT:
     case INPUT:{
-      IO();
+      n = IO();
       break;
       }
     case VOID:
     case INT:
     case FLOAT:
     case STRING:{
-      Declaracao();
+      n = Declaracao();
       break;
       }
     case LPAREN:
     case IDENTIFIER:
     case NUMBER:
     case STRING_LITERAL:{
-      FraseFinalizada();
+      n = FraseFinalizada();
       break;
       }
     default:
@@ -92,26 +95,32 @@ void Programa() throws ParseException {
       jj_consume_token(-1);
       throw new ParseException();
     }
+{if ("" != null) return n;}
+    throw new Error("Missing return statement in function");
 }
 
-// --- Entrada e Saída (IO) ---
-  final public 
-void IO() throws ParseException {
+  final public No IO() throws ParseException {No n = new No("IO"); No expr; Token t;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case PRINT:{
       jj_consume_token(PRINT);
       jj_consume_token(LPAREN);
-      Expressao();
+      expr = Expressao();
       jj_consume_token(RPAREN);
       jj_consume_token(SEMICOLON);
+n.addFilho(new No("Comando", "vyvod"));
+        n.addFilho(expr);
+        {if ("" != null) return n;}
       break;
       }
     case INPUT:{
       jj_consume_token(INPUT);
       jj_consume_token(LPAREN);
-      Identificador();
+      t = jj_consume_token(IDENTIFIER);
       jj_consume_token(RPAREN);
       jj_consume_token(SEMICOLON);
+n.addFilho(new No("Comando", "vvod"));
+        n.addFilho(new No("Var", t.image));
+        {if ("" != null) return n;}
       break;
       }
     default:
@@ -119,17 +128,18 @@ void IO() throws ParseException {
       jj_consume_token(-1);
       throw new ParseException();
     }
+    throw new Error("Missing return statement in function");
 }
 
-// --- Estrutura de Frases e Atribuição ---
-  final public 
-void FraseFinalizada() throws ParseException {
-    Frase();
+  final public No FraseFinalizada() throws ParseException {No n;
+    n = Frase();
     jj_consume_token(SEMICOLON);
+{if ("" != null) return n;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void Frase() throws ParseException {
-    Expressao();
+  final public No Frase() throws ParseException {No expr; No n = new No("Frase"); Token t; No atrib;
+    expr = Expressao();
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case INC:
     case DEC:
@@ -137,15 +147,26 @@ void FraseFinalizada() throws ParseException {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case ASSIGN:{
         jj_consume_token(ASSIGN);
-        Expressao();
+        atrib = Expressao();
+n = new No("Atribuicao");
+             n.addFilho(expr); // Variável
+             n.addFilho(new No("Operador", "="));
+             n.addFilho(atrib); // Valor
+             {if ("" != null) return n;}
         break;
         }
       case INC:{
         jj_consume_token(INC);
+n = new No("Incremento");
+             n.addFilho(expr);
+             {if ("" != null) return n;}
         break;
         }
       case DEC:{
         jj_consume_token(DEC);
+n = new No("Decremento");
+             n.addFilho(expr);
+             {if ("" != null) return n;}
         break;
         }
       default:
@@ -159,46 +180,56 @@ void FraseFinalizada() throws ParseException {
       jj_la1[4] = jj_gen;
       ;
     }
+{if ("" != null) return expr;}
+    throw new Error("Missing return statement in function");
 }
 
-// --- Declaração de Variáveis ---
-  final public 
-void Declaracao() throws ParseException {
-    TipoEspecificador();
-    Identificador();
-    OpcionalInicializacao();
+  final public No Declaracao() throws ParseException {No n = new No("Declaracao"); No tipo; Token t; No inic = null;
+    tipo = TipoEspecificador();
+    t = jj_consume_token(IDENTIFIER);
+    inic = OpcionalInicializacao();
     jj_consume_token(SEMICOLON);
+n.addFilho(tipo);
+        n.addFilho(new No("Var", t.image));
+        if (inic != null) {
+            n.addFilho(new No("Inicializacao"));
+            n.addFilho(inic);
+        }
+        {if ("" != null) return n;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void OpcionalInicializacao() throws ParseException {
+  final public No OpcionalInicializacao() throws ParseException {No expr = null;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case ASSIGN:{
       jj_consume_token(ASSIGN);
-      Expressao();
+      expr = Expressao();
       break;
       }
     default:
       jj_la1[5] = jj_gen;
       ;
     }
+{if ("" != null) return expr;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void TipoEspecificador() throws ParseException {
+  final public No TipoEspecificador() throws ParseException {Token t;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case VOID:{
-      jj_consume_token(VOID);
+      t = jj_consume_token(VOID);
       break;
       }
     case INT:{
-      jj_consume_token(INT);
+      t = jj_consume_token(INT);
       break;
       }
     case FLOAT:{
-      jj_consume_token(FLOAT);
+      t = jj_consume_token(FLOAT);
       break;
       }
     case STRING:{
-      jj_consume_token(STRING);
+      t = jj_consume_token(STRING);
       break;
       }
     default:
@@ -206,16 +237,18 @@ void Declaracao() throws ParseException {
       jj_consume_token(-1);
       throw new ParseException();
     }
+{if ("" != null) return new No("Tipo", t.image);}
+    throw new Error("Missing return statement in function");
 }
 
-// --- Estruturas de Controle ---
-  final public 
-void Condicional() throws ParseException {
+  final public No Condicional() throws ParseException {No n = new No("IF"); No cond; No cmd;
     jj_consume_token(IF);
     jj_consume_token(LPAREN);
-    Expressao();
+    cond = Expressao();
     jj_consume_token(RPAREN);
     jj_consume_token(LBRACE);
+n.addFilho(cond);
+        No blocoIf = new No("Bloco True");
     label_2:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -238,13 +271,16 @@ void Condicional() throws ParseException {
         jj_la1[7] = jj_gen;
         break label_2;
       }
-      Comando();
+      cmd = Comando();
+blocoIf.addFilho(cmd);
     }
     jj_consume_token(RBRACE);
+n.addFilho(blocoIf);
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case ELSE:{
       jj_consume_token(ELSE);
       jj_consume_token(LBRACE);
+No blocoElse = new No("Bloco Else");
       label_3:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -267,23 +303,28 @@ void Condicional() throws ParseException {
           jj_la1[8] = jj_gen;
           break label_3;
         }
-        Comando();
+        cmd = Comando();
+blocoElse.addFilho(cmd);
       }
       jj_consume_token(RBRACE);
+n.addFilho(blocoElse);
       break;
       }
     default:
       jj_la1[9] = jj_gen;
       ;
     }
+{if ("" != null) return n;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void Iteracao() throws ParseException {
+  final public No Iteracao() throws ParseException {No n = new No("WHILE"); No cond; No cmd;
     jj_consume_token(WHILE);
     jj_consume_token(LPAREN);
-    Expressao();
+    cond = Expressao();
     jj_consume_token(RPAREN);
     jj_consume_token(LBRACE);
+n.addFilho(cond); No bloco = new No("Bloco Loop");
     label_4:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -306,19 +347,23 @@ void Condicional() throws ParseException {
         jj_la1[10] = jj_gen;
         break label_4;
       }
-      Comando();
+      cmd = Comando();
+bloco.addFilho(cmd);
     }
     jj_consume_token(RBRACE);
+n.addFilho(bloco);
+        {if ("" != null) return n;}
+    throw new Error("Missing return statement in function");
 }
 
-// --- Expressões ---
-  final public 
-void Expressao() throws ParseException {
-    ExpressaoRelacional();
+  final public No Expressao() throws ParseException {No n;
+    n = ExpressaoRelacional();
+{if ("" != null) return n;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void ExpressaoRelacional() throws ParseException {
-    ExpressaoAditiva();
+  final public No ExpressaoRelacional() throws ParseException {No atual, prox; Token op;
+    atual = ExpressaoAditiva();
     label_5:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -337,27 +382,27 @@ void Expressao() throws ParseException {
       }
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case EQ:{
-        jj_consume_token(EQ);
+        op = jj_consume_token(EQ);
         break;
         }
       case NEQ:{
-        jj_consume_token(NEQ);
+        op = jj_consume_token(NEQ);
         break;
         }
       case GT:{
-        jj_consume_token(GT);
+        op = jj_consume_token(GT);
         break;
         }
       case LT:{
-        jj_consume_token(LT);
+        op = jj_consume_token(LT);
         break;
         }
       case GE:{
-        jj_consume_token(GE);
+        op = jj_consume_token(GE);
         break;
         }
       case LE:{
-        jj_consume_token(LE);
+        op = jj_consume_token(LE);
         break;
         }
       default:
@@ -365,12 +410,18 @@ void Expressao() throws ParseException {
         jj_consume_token(-1);
         throw new ParseException();
       }
-      ExpressaoAditiva();
+      prox = ExpressaoAditiva();
+No novoPai = new No("Op.Relacional", op.image);
+          novoPai.addFilho(atual);
+          novoPai.addFilho(prox);
+          atual = novoPai;
     }
+{if ("" != null) return atual;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void ExpressaoAditiva() throws ParseException {
-    ExpressaoMultiplicativa();
+  final public No ExpressaoAditiva() throws ParseException {No atual, prox; Token op;
+    atual = ExpressaoMultiplicativa();
     label_6:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -385,11 +436,11 @@ void Expressao() throws ParseException {
       }
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case PLUS:{
-        jj_consume_token(PLUS);
+        op = jj_consume_token(PLUS);
         break;
         }
       case MINUS:{
-        jj_consume_token(MINUS);
+        op = jj_consume_token(MINUS);
         break;
         }
       default:
@@ -397,12 +448,18 @@ void Expressao() throws ParseException {
         jj_consume_token(-1);
         throw new ParseException();
       }
-      ExpressaoMultiplicativa();
+      prox = ExpressaoMultiplicativa();
+No novoPai = new No("Op.Aditivo", op.image);
+          novoPai.addFilho(atual);
+          novoPai.addFilho(prox);
+          atual = novoPai;
     }
+{if ("" != null) return atual;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void ExpressaoMultiplicativa() throws ParseException {
-    Termo();
+  final public No ExpressaoMultiplicativa() throws ParseException {No atual, prox; Token op;
+    atual = Termo();
     label_7:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -420,23 +477,23 @@ void Expressao() throws ParseException {
       }
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case MULT:{
-        jj_consume_token(MULT);
+        op = jj_consume_token(MULT);
         break;
         }
       case DIV:{
-        jj_consume_token(DIV);
+        op = jj_consume_token(DIV);
         break;
         }
       case DIVINT:{
-        jj_consume_token(DIVINT);
+        op = jj_consume_token(DIVINT);
         break;
         }
       case MOD:{
-        jj_consume_token(MOD);
+        op = jj_consume_token(MOD);
         break;
         }
       case POW:{
-        jj_consume_token(POW);
+        op = jj_consume_token(POW);
         break;
         }
       default:
@@ -444,28 +501,38 @@ void Expressao() throws ParseException {
         jj_consume_token(-1);
         throw new ParseException();
       }
-      Termo();
+      prox = Termo();
+No novoPai = new No("Op.Multiplicativo", op.image);
+          novoPai.addFilho(atual);
+          novoPai.addFilho(prox);
+          atual = novoPai;
     }
+{if ("" != null) return atual;}
+    throw new Error("Missing return statement in function");
 }
 
-  final public void Termo() throws ParseException {
+  final public No Termo() throws ParseException {Token t; No n;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case IDENTIFIER:{
-      Identificador();
+      t = jj_consume_token(IDENTIFIER);
+{if ("" != null) return new No("Var", t.image);}
       break;
       }
     case NUMBER:{
-      Numero();
+      t = jj_consume_token(NUMBER);
+{if ("" != null) return new No("Num", t.image);}
       break;
       }
     case STRING_LITERAL:{
-      StringLiteral();
+      t = jj_consume_token(STRING_LITERAL);
+{if ("" != null) return new No("String", t.image);}
       break;
       }
     case LPAREN:{
       jj_consume_token(LPAREN);
-      Expressao();
+      n = Expressao();
       jj_consume_token(RPAREN);
+{if ("" != null) return n;}
       break;
       }
     default:
@@ -473,20 +540,7 @@ void Expressao() throws ParseException {
       jj_consume_token(-1);
       throw new ParseException();
     }
-}
-
-// --- Wrappers de Tokens ---
-  final public 
-void Identificador() throws ParseException {
-    jj_consume_token(IDENTIFIER);
-}
-
-  final public void Numero() throws ParseException {
-    jj_consume_token(NUMBER);
-}
-
-  final public void StringLiteral() throws ParseException {
-    jj_consume_token(STRING_LITERAL);
+    throw new Error("Missing return statement in function");
 }
 
   /** Generated Token Manager. */
