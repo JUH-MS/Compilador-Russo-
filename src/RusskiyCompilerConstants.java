@@ -9,88 +9,82 @@ public interface RusskiyCompilerConstants {
   /** End of File. */
   int EOF = 0;
   /** RegularExpression Id. */
-  int VOID = 6;
+  int VOID = 8;
   /** RegularExpression Id. */
-  int INT = 7;
+  int INT = 9;
   /** RegularExpression Id. */
-  int FLOAT = 8;
+  int FLOAT = 10;
   /** RegularExpression Id. */
-  int STRING_TYPE = 9;
+  int STRING = 11;
   /** RegularExpression Id. */
-  int STRING_VALUE = 10;
+  int IF = 12;
   /** RegularExpression Id. */
-  int IF = 11;
+  int ELSE = 13;
   /** RegularExpression Id. */
-  int ELSE = 12;
+  int FOR = 14;
   /** RegularExpression Id. */
-  int FOR = 13;
+  int WHILE = 15;
   /** RegularExpression Id. */
-  int WHILE = 14;
+  int PRINT = 16;
   /** RegularExpression Id. */
-  int PRINT = 15;
+  int INPUT = 17;
   /** RegularExpression Id. */
-  int INPUT = 16;
+  int EQ = 18;
   /** RegularExpression Id. */
-  int E = 17;
+  int NEQ = 19;
   /** RegularExpression Id. */
-  int OU = 18;
+  int LE = 20;
   /** RegularExpression Id. */
-  int TRUE = 19;
+  int GE = 21;
   /** RegularExpression Id. */
-  int FALSE = 20;
+  int INC = 22;
   /** RegularExpression Id. */
-  int IDENTIFIER = 21;
+  int DEC = 23;
   /** RegularExpression Id. */
-  int NUMBER = 22;
+  int POW = 24;
   /** RegularExpression Id. */
-  int PLUS = 23;
+  int DIVINT = 25;
   /** RegularExpression Id. */
-  int INC = 24;
+  int ASSIGN = 26;
   /** RegularExpression Id. */
-  int MINUS = 25;
+  int GT = 27;
   /** RegularExpression Id. */
-  int DEC = 26;
+  int LT = 28;
   /** RegularExpression Id. */
-  int MULT = 27;
+  int PLUS = 29;
   /** RegularExpression Id. */
-  int DIVINT = 28;
+  int MINUS = 30;
   /** RegularExpression Id. */
-  int DIV = 29;
+  int MULT = 31;
   /** RegularExpression Id. */
-  int POW = 30;
+  int DIV = 32;
   /** RegularExpression Id. */
-  int MOD = 31;
+  int MOD = 33;
   /** RegularExpression Id. */
-  int LPAREN = 32;
+  int LPAREN = 34;
   /** RegularExpression Id. */
-  int RPAREN = 33;
-  /** RegularExpression Id. */
-  int SEMICOLON = 34;
-  /** RegularExpression Id. */
-  int COMMA = 35;
+  int RPAREN = 35;
   /** RegularExpression Id. */
   int LBRACE = 36;
   /** RegularExpression Id. */
   int RBRACE = 37;
   /** RegularExpression Id. */
-  int DOT = 38;
+  int SEMICOLON = 38;
   /** RegularExpression Id. */
-  int EQ = 39;
+  int COMMA = 39;
   /** RegularExpression Id. */
-  int NEQ = 40;
+  int DOT = 40;
   /** RegularExpression Id. */
-  int LT = 41;
+  int IDENTIFIER = 41;
   /** RegularExpression Id. */
-  int GT = 42;
+  int NUMBER = 42;
   /** RegularExpression Id. */
-  int LEQ = 43;
-  /** RegularExpression Id. */
-  int GEQ = 44;
-  /** RegularExpression Id. */
-  int ASSIGN = 45;
+  int STRING_LITERAL = 43;
 
   /** Lexical state. */
   int DEFAULT = 0;
+  /** Lexical state. */
+  int IN_SINGLE_LINE_COMMENT = 1;
 
   /** Literal token values. */
   String[] tokenImage = {
@@ -99,47 +93,45 @@ public interface RusskiyCompilerConstants {
     "\"\\t\"",
     "\"\\n\"",
     "\"\\r\"",
-    "<token of kind 5>",
+    "\"ili\"",
+    "<token of kind 6>",
+    "<token of kind 7>",
     "\"pusto\"",
     "\"tseloye\"",
     "\"drobnoye\"",
     "\"slova\"",
-    "<STRING_VALUE>",
     "\"yesli\"",
     "\"inache\"",
     "\"kazhday\"",
     "\"poka\"",
     "\"vyvod\"",
     "\"vvod\"",
-    "\"/i\"",
-    "\"ili\"",
-    "\"true\"",
-    "\"false\"",
-    "<IDENTIFIER>",
-    "<NUMBER>",
-    "\"+\"",
+    "\"==\"",
+    "\"!=\"",
+    "\"<=\"",
+    "\">=\"",
     "\"++\"",
-    "\"-\"",
     "\"--\"",
-    "\"*\"",
-    "\"//\"",
-    "\"/\"",
     "\"**\"",
+    "\"//\"",
+    "\"=\"",
+    "\">\"",
+    "\"<\"",
+    "\"+\"",
+    "\"-\"",
+    "\"*\"",
+    "\"/\"",
     "\"%\"",
     "\"(\"",
     "\")\"",
-    "\";\"",
-    "\",\"",
     "\"{\"",
     "\"}\"",
+    "\";\"",
+    "\",\"",
     "\".\"",
-    "\"==\"",
-    "\"!=\"",
-    "\"<\"",
-    "\">\"",
-    "\"<=\"",
-    "\">=\"",
-    "\"=\"",
+    "<IDENTIFIER>",
+    "<NUMBER>",
+    "<STRING_LITERAL>",
   };
 
 }

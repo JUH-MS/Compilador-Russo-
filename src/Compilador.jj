@@ -1,37 +1,32 @@
 options {
-    STATIC = false;
+  STATIC = false;
 }
 
 PARSER_BEGIN(RusskiyCompiler)
-import java.util.*;
+import java.io.*;
 
 public class RusskiyCompiler {
-  Map<String, Object> memoria = new HashMap<>();
-
-    public static void main(String args[]) throws Exception {
-        RusskiyCompiler parser = new RusskiyCompiler(System.in);
-        boolean rodando = true;
-
-        while (rodando) {
-            System.out.println("Nachalo");
-            System.out.println("Digite sua frase e vamos ver se até Dostoiévski aprovaria.");
-            try {
-                parser.Programa();
-                System.out.println("✔ Código aceito com sucesso!");
-            } catch (ParseException e) {
-                System.out.println("Frase inválida! Stalin não aprovaria essa sintaxe.");
-                System.out.println("Detalhes: " + e.getMessage());
-                parser.ReInit(System.in);
-            } catch (TokenMgrError e) {
-                System.out.println("Erro léxico: caractere inválido.");
-                System.out.println("Mensagem: " + e.getMessage());
-                parser.ReInit(System.in);
-            } catch (Exception e) {
-                System.out.println("Erro inesperado.");
-                System.out.println("Mensagem: " + e.getMessage());
-                rodando = false;
-            }
+    public static void main(String args[]) throws ParseException {
+      RusskiyCompiler parser = new RusskiyCompiler(System.in);
+      
+      while (true) {
+        System.out.println("------------------------------------------------");
+        System.out.println("Nachalo - Compilador Russo (Digite ou CTRL+C para sair):");
+        System.out.print("> ");
+        
+        try {
+            parser.Programa();
+            System.out.println("✔ Código aceito (Slava Russkiy)!");
+        } catch (ParseException e) {
+            System.out.println("❌ Erro sintático:");
+            System.out.println(e.getMessage());
+            parser.ReInit(System.in);
+        } catch (TokenMgrError e) {
+            System.out.println("❌ Erro léxico:");
+            System.out.println(e.getMessage());
+            parser.ReInit(System.in);
         }
+      }
     }
 }
 PARSER_END(RusskiyCompiler)
@@ -40,216 +35,199 @@ SKIP : {
     " " | "\t" | "\n" | "\r"
 }
 
+// --- Comentários ---
 MORE : {
-    < "#" (~["\n","\r"])* > : DEFAULT
+    "ili" : IN_SINGLE_LINE_COMMENT
+}
+<IN_SINGLE_LINE_COMMENT> SKIP : {
+    < ~["\n","\r"] >
+}
+<IN_SINGLE_LINE_COMMENT> SKIP : {
+    < ("\n"|"\r"|"\r\n") > : DEFAULT
 }
 
+// =============================
+// Tokens
+// =============================
 TOKEN : {
-    < VOID          : "pusto"               >
-  | < INT           : "tseloye"             >
-  | < FLOAT         : "drobnoye"            >
-  | < STRING_TYPE   : "slova"               >
-  | < STRING_VALUE  : "\"" (~["\""])* "\""  >
+  // --- Palavras-Chave ---
+    < VOID      : "pusto"                > 
+  | < INT       : "tseloye"              > 
+  | < FLOAT     : "drobnoye"             > 
+  | < STRING    : "slova"                > 
+  | < IF        : "yesli"                > 
+  | < ELSE      : "inache"               > 
+  | < FOR       : "kazhday"              > 
+  | < WHILE     : "poka"                 > 
+  | < PRINT     : "vyvod"                > 
+  | < INPUT     : "vvod"                 > 
 
-  | < IF            : "yesli"               >
-  | < ELSE          : "inache"              >
-  | < FOR           : "kazhday"             >
-  | < WHILE         : "poka"                >
-  | < PRINT         : "vyvod"               >
-  | < INPUT         : "vvod"                >
-  | < E             : "/i"                  >
-  | < OU            : "ili"                 >
+  // --- Operadores Compostos ---
+  | < EQ        : "=="                   > 
+  | < NEQ       : "!="                   > 
+  | < LE        : "<="                   > 
+  | < GE        : ">="                   > 
+  | < INC       : "++"                   > 
+  | < DEC       : "--"                   > 
+  | < POW       : "**"                   > 
+  | < DIVINT    : "//"                   > 
 
-  | < TRUE          : "pravda"              >
-  | < FALSE         : "nepravda"            >
+  // --- Operadores Simples ---
+  | < ASSIGN    : "="                    > 
+  | < GT        : ">"                    > 
+  | < LT        : "<"                    > 
+  | < PLUS      : "+"                    > 
+  | < MINUS     : "-"                    > 
+  | < MULT      : "*"                    > 
+  | < DIV       : "/"                    > 
+  | < MOD       : "%"                    > 
 
-  | < IDENTIFIER    : (["a"-"z","A"-"Z"])+  >
-  | < NUMBER        : (["0"-"9"])+          >
+  // --- Pontuação ---
+  | < LPAREN    : "("                    >
+  | < RPAREN    : ")"                    >
+  | < LBRACE    : "{"                    >
+  | < RBRACE    : "}"                    >
+  | < SEMICOLON : ";"                    >
+  | < COMMA     : ","                    >
+  | < DOT       : "."                    >
 
-  | < PLUS          : "+"                   >
-  | < INC           : "++"                  >
-  | < MINUS         : "-"                   >
-  | < DEC           : "--"                  >
-  | < MULT          : "*"                   >
-  | < DIVINT        : "//"                  >
-  | < DIV           : "/"                   >
-  | < POW           : "**"                  >
-  | < MOD           : "%"                   >
-
-  | < LPAREN        : "("                   >
-  | < RPAREN        : ")"                   >
-  | < SEMICOLON     : ";"                   >
-  | < COMMA         : ","                   >
-  | < LBRACE        : "{"                   >
-  | < RBRACE        : "}"                   >
-  | < DOT           : "."                   >
-  | < EQ            : "=="                  >
-  | < NEQ           : "!="                  >
-  | < LT            : "<"                   >
-  | < GT            : ">"                   >
-  | < LEQ           : "<="                  >
-  | < GEQ           : ">="                  >
-
-  | < ASSIGN        : "="                   >
+  // --- Literais ---
+  | < IDENTIFIER : ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+  | < NUMBER     : (["0"-"9"])+ ( "." (["0"-"9"])+ )? >
+  | < STRING_LITERAL : "\"" (~["\"","\n","\r"])* "\"" >
 }
 
-void Programa() : {} {
-    Vvod() <EOF>
+// =============================
+// Gramática
+// =============================
+
+void Programa() : {}
+{
+    ( Comando() )* <EOF>
 }
 
-void Vvod() : {} {
-    ListaDeDeclaracoes()
-    ListaDeComandos()
+void Comando() : {}
+{
+    Condicional()
+  | Iteracao()
+  | IO()               
+  | Declaracao()       
+  | FraseFinalizada()  
 }
 
-void ListaDeDeclaracoes() : {} {
-    ( Declaracao() )*
+// --- Entrada e Saída (IO) ---
+
+void IO() : {}
+{
+    <PRINT> <LPAREN> Expressao() <RPAREN> <SEMICOLON>
+    |
+    <INPUT> <LPAREN> Identificador() <RPAREN> <SEMICOLON>
 }
 
-void ListaDeComandos() : {} {
-    ( Comando() )*
+// --- Estrutura de Frases e Atribuição ---
+
+void FraseFinalizada() : {}
+{
+    Frase() <SEMICOLON>
 }
 
-void Declaracao() : {} {
-    TipoEspecificador()
-    Identificador()
-    OpcionalInicializacao()
-    <SEMICOLON>
+void Frase() : {}
+{
+    Expressao() 
+    (
+        <ASSIGN> Expressao() 
+      | 
+        <INC>
+      | 
+        <DEC>
+    )?
 }
 
-void OpcionalInicializacao() : {} {
+// --- Declaração de Variáveis ---
+
+void Declaracao() : {}
+{
+    TipoEspecificador() Identificador() OpcionalInicializacao() <SEMICOLON>
+}
+
+void OpcionalInicializacao() : {}
+{
     [ <ASSIGN> Expressao() ]
 }
 
-void TipoEspecificador() : {} {
-      <VOID>
-    | <INT>
-    | <FLOAT>
-    | <STRING_TYPE>
-    | Dvoichnaya()
+void TipoEspecificador() : {}
+{
+    <VOID> | <INT> | <FLOAT> | <STRING>
 }
 
-void Comando() : {} {
-      Condicional()
-    | Iteracao()
-    | FraseFinalizada()
-    | Vyvod()
+// --- Estruturas de Controle ---
+
+void Condicional() : {}
+{
+    <IF> <LPAREN> Expressao() <RPAREN> <LBRACE> ( Comando() )* <RBRACE> 
+    [ <ELSE> <LBRACE> ( Comando() )* <RBRACE> ]
 }
 
-void Condicional() : {} {
-    LOOKAHEAD(2)
-    <IF> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-    [ <ELSE> <LBRACE> ListaDeComandos() <RBRACE> ]
-  | LOOKAHEAD(1)
-    <ELSE> <LBRACE> ListaDeComandos() <RBRACE>
+void Iteracao() : {}
+{
+    <WHILE> <LPAREN> Expressao() <RPAREN> <LBRACE> ( Comando() )* <RBRACE>
 }
 
-void Iteracao() : {} {
-    <WHILE> <LPAREN> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
-  | <FOR> <LPAREN> Frase() <SEMICOLON> Frase() <SEMICOLON> Frase() <RPAREN> <LBRACE> ListaDeComandos() <RBRACE>
+// --- Expressões ---
+
+void Expressao() : {} 
+{
+    ExpressaoRelacional()
 }
 
-void FraseFinalizada() : {} {
-    LOOKAHEAD(2)
-    Frase() <SEMICOLON>
-  | LOOKAHEAD(1)
-    Frase() {
-        System.out.println("Meu camarada Russo, um programa sem ';' é como uma vodka pela metade, não acabou.");
-        while (getToken(1).kind != SEMICOLON &&
-               getToken(1).kind != RBRACE &&
-               getToken(1).kind != 0) {
-            getNextToken();
-        }
-        if (getToken(1).kind == SEMICOLON) {
-            getNextToken();
-        }
-    }
+void ExpressaoRelacional() : {}
+{
+    ExpressaoAditiva() 
+    ( 
+      ( <EQ> | <NEQ> | <GT> | <LT> | <GE> | <LE> ) 
+      ExpressaoAditiva() 
+    )*
 }
 
-void Frase() : {} {
-    LOOKAHEAD(3) Atribuicao()
-  | Expressao()
+void ExpressaoAditiva() : {} 
+{
+    ExpressaoMultiplicativa() 
+    ( 
+      ( <PLUS> | <MINUS> ) 
+      ExpressaoMultiplicativa() 
+    )*
 }
 
-void Atribuicao() : {} {
-    LOOKAHEAD(3)
-    Identificador() <ASSIGN> Expressao()
-  | Identificador() OperadorIncdec()
+void ExpressaoMultiplicativa() : {} 
+{
+    Termo() 
+    ( 
+      ( <MULT> | <DIV> | <DIVINT> | <MOD> | <POW> ) 
+      Termo() 
+    )*
 }
 
-void Expressao() : {} {
-    Termo() ( (OperadorBinario() | OperadorComparacao()) Termo() )*
+void Termo() : {}
+{
+    Identificador()
+  | Numero()
+  | StringLiteral()    
+  | <LPAREN> Expressao() <RPAREN>
 }
 
-void Termo() : {} {
-      Identificador()
-    | Numero()
-    | <STRING_VALUE>
-    | Dvoichnaya()
-    | <LPAREN> Expressao() <RPAREN>
-}
+// --- Wrappers de Tokens ---
 
-void OperadorBinario() : {} {
-      <PLUS>
-    | <MINUS>
-    | <MULT>
-    | <DIV>
-    | <MOD>
-    | <POW>
-    | <E>
-    | <OU>
-}
-
-void OperadorComparacao() : {} {
-      <EQ>
-    | <NEQ>
-    | <LT>
-    | <GT>
-    | <LEQ>
-    | <GEQ>
-}
-
-void Identificador() : {} {
+void Identificador() : {}
+{
     <IDENTIFIER>
 }
 
-void Numero() : {} {
+void Numero() : {}
+{
     <NUMBER>
 }
 
-void OperadorIncdec() : {} {
-      <INC>
-    | <DEC>
-}
-
-void Dvoichnaya() : {} {
-      <TRUE>
-    | <FALSE>
-}
-
-void Vyvod() : {} {
-    <PRINT> <LPAREN> 
-    ListaDeArgumentos() 
-    <RPAREN> <SEMICOLON>
-    {
-        System.out.println("✔ Comando de saída reconhecido com sucesso!");
-    }
-}
-
-void ListaDeArgumentos() : {} {
-    ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> | <TRUE> | <FALSE> ) 
-    ( <COMMA> ( <IDENTIFIER> | <NUMBER> | <STRING_VALUE> | <TRUE> | <FALSE> ) )*
-}
-
-void Funktsyia() : {} {
-    Identificador() <LPAREN> ListaDeComandos() <RPAREN> 
-    <LBRACE> ListaDeComandos() Vozvrat() <RBRACE>
-}
-
-void Vozvrat() : {} {
-    Dvoichnaya()
-}
-
-void Pusto() : {} {
-    Funktsyia()
+void StringLiteral() : {}
+{
+    <STRING_LITERAL>
 }
