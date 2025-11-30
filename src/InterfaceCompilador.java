@@ -1,54 +1,59 @@
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.DefaultHighlighter;
 
 public class InterfaceCompilador extends JFrame {
 
     private JTextArea editorArea;
-    private JTextPane painelGeral; // Para mensagens de Sucesso/Erro
-    private JTextArea arvoreArea;  // Para a Árvore Sintática / Saída
-    private JTextArea lineNumbers; // Numeração das linhas
+    private JTextPane consoleArea;
+    private JTextArea arvoreArea;
+    private JTextArea tokensArea;
+    private JTextArea lineNumbers;
 
     public InterfaceCompilador() {
-        super("Compilador Russo - Interface");
-
-        setSize(950, 700);
+        super("Compilador Russo - IDE");
+        setSize(1000, 750);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        setLocationRelativeTo(null); // Centraliza na tela
+        setLocationRelativeTo(null);
 
-        // --- 1. Botões (Topo) ---
-        JPanel painelBotoes = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // --- BOTOES ---
+        JToolBar toolBar = new JToolBar();
+        toolBar.setFloatable(false);
         
-        JButton btnAbrir = new JButton("Abrir Arquivo");
+        JButton btnAbrir = new JButton("Abrir");
         btnAbrir.addActionListener(e -> abrirArquivo());
-
+        
         JButton btnCompilar = new JButton("Compilar");
-        btnCompilar.setFont(new Font("SansSerif", Font.BOLD, 12));
-        btnCompilar.setBackground(new Color(220, 255, 220)); // Verde claro
+        btnCompilar.setBackground(new Color(200, 255, 200));
         btnCompilar.addActionListener(e -> compilarCodigo());
+        
+        JButton btnGerarC = new JButton("Gerar C");
+        btnGerarC.addActionListener(e -> gerarCodigoC());
 
-        painelBotoes.add(btnAbrir);
-        painelBotoes.add(btnCompilar);
+        toolBar.add(btnAbrir);
+        toolBar.addSeparator();
+        toolBar.add(btnCompilar);
+        toolBar.add(btnGerarC);
+        add(toolBar, BorderLayout.NORTH);
 
-        add(painelBotoes, BorderLayout.NORTH);
-
-        // --- 2. Área de Código (Centro) ---
+        // --- EDITOR ---
         editorArea = new JTextArea();
         editorArea.setFont(new Font("Consolas", Font.PLAIN, 16));
         
-        // Configuração da numeração de linhas
         lineNumbers = new JTextArea("1");
         lineNumbers.setBackground(Color.LIGHT_GRAY);
         lineNumbers.setEditable(false);
         lineNumbers.setFont(new Font("Consolas", Font.PLAIN, 16));
         lineNumbers.setBorder(new EmptyBorder(0, 5, 0, 5));
         
-        // Atualiza linhas ao digitar
         editorArea.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { atualizarLinhas(); }
             public void removeUpdate(DocumentEvent e) { atualizarLinhas(); }
@@ -57,117 +62,149 @@ public class InterfaceCompilador extends JFrame {
 
         JScrollPane scrollEditor = new JScrollPane(editorArea);
         scrollEditor.setRowHeaderView(lineNumbers);
-        
-        add(scrollEditor, BorderLayout.CENTER);
 
-        // --- 3. Painéis Inferiores (Sul) ---
-        
-        // Painel de Status (Esquerda)
-        painelGeral = new JTextPane();
-        painelGeral.setContentType("text/html");
-        painelGeral.setEditable(false);
-        JScrollPane scrollGeral = new JScrollPane(painelGeral);
-        scrollGeral.setBorder(BorderFactory.createTitledBorder("Console / Status"));
+        // --- ABAS (CONSOLE, ARVORE, TOKENS) ---
+        JTabbedPane tabbedPane = new JTabbedPane();
 
-        // Painel da Árvore (Direita)
+        consoleArea = new JTextPane();
+        consoleArea.setContentType("text/html");
+        consoleArea.setEditable(false);
+        tabbedPane.addTab("Console / Erros", new JScrollPane(consoleArea));
+
         arvoreArea = new JTextArea();
         arvoreArea.setEditable(false);
         arvoreArea.setFont(new Font("Consolas", Font.PLAIN, 14));
-        JScrollPane scrollArvore = new JScrollPane(arvoreArea);
-        scrollArvore.setBorder(BorderFactory.createTitledBorder("Árvore Sintática / Saída"));
+        tabbedPane.addTab("Arvore Sintatica", new JScrollPane(arvoreArea));
 
-        // Divisão Horizontal
-        JSplitPane painelInferior = new JSplitPane(
-                JSplitPane.HORIZONTAL_SPLIT,
-                scrollGeral,
-                scrollArvore
-        );
-        painelInferior.setDividerLocation(450);
-        painelInferior.setResizeWeight(0.5);
-        painelInferior.setPreferredSize(new Dimension(getWidth(), 200));
+        tokensArea = new JTextArea();
+        tokensArea.setEditable(false);
+        tokensArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+        tabbedPane.addTab("Lista de Tokens", new JScrollPane(tokensArea));
 
-        add(painelInferior, BorderLayout.SOUTH);
-
+        JSplitPane splitPrincipal = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollEditor, tabbedPane);
+        splitPrincipal.setDividerLocation(450);
+        
+        add(splitPrincipal, BorderLayout.CENTER);
         setVisible(true);
     }
 
-    // --- MÉTODOS QUE ESTAVAM FALTANDO ---
-
     private void atualizarLinhas() {
-        int linhas = editorArea.getLineCount();
+        int lines = editorArea.getLineCount();
         StringBuilder sb = new StringBuilder();
-        for (int i = 1; i <= linhas; i++) {
-            sb.append(i).append(System.lineSeparator());
-        }
+        for (int i = 1; i <= lines; i++) { sb.append(i).append("\n"); }
         lineNumbers.setText(sb.toString());
     }
 
     private void abrirArquivo() {
-        JFileChooser chooser = new JFileChooser();
-        int result = chooser.showOpenDialog(this);
-
-        if(result == JFileChooser.APPROVE_OPTION){
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Arquivos de Texto", "txt", "rus"));
+        
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
             try {
-                String texto = Files.readString(chooser.getSelectedFile().toPath());
-                editorArea.setText(texto);
+                File selectedFile = fileChooser.getSelectedFile();
+                String content = Files.readString(selectedFile.toPath());
+                editorArea.setText(content);
                 atualizarLinhas();
+                consoleArea.setText("<html><font color='blue'>Arquivo carregado: " + selectedFile.getName() + "</font></html>");
             } catch (Exception ex) {
-                painelGeral.setText("<html><span style='color:red;'>Erro ao abrir arquivo:<br>" 
-                                    + ex.getMessage() + "</span></html>");
+                JOptionPane.showMessageDialog(this, "Erro ao ler arquivo: " + ex.getMessage());
             }
         }
     }
 
     private void compilarCodigo() {
         String codigo = editorArea.getText();
-        
-        // Limpa áreas anteriores
-        painelGeral.setText("");
-        arvoreArea.setText("");
+        limparInterface();
 
-        // Salva a saída original do sistema
         PrintStream originalOut = System.out;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(baos));
 
         try {
-            // 1. Redireciona System.out para a área da árvore
-            System.setOut(new PrintStream(new OutputStream() {
-                @Override
-                public void write(int b) {
-                    arvoreArea.append(String.valueOf((char) b));
-                }
-            }));
+            listarTokens(codigo);
 
-            // 2. Prepara o parser com o código da tela
             InputStream is = new ByteArrayInputStream(codigo.getBytes());
-            
-            // Instancia o parser
             RusskiyCompiler parser = new RusskiyCompiler(is);
-            
-            // 3. Executa a regra inicial
-            parser.Programa();
-    
-            // 4. Se não deu erro, exibe sucesso no painel esquerdo
-            painelGeral.setText("<html><h3 style='color:green; font-family:sans-serif;'>✔ Código aceito com sucesso!</h3>" +
-                                "<p>Árvore/Saída gerada no painel à direita.</p></html>");
-    
+            parser.Programa(); 
+
+            arvoreArea.setText(baos.toString());
+
+            consoleArea.setText("<html><h3 style='color:green'>Compilacao com Sucesso!</h3></html>");
+
         } catch (ParseException e) {
-            painelGeral.setText("<html><h3 style='color:red; font-family:sans-serif;'>Erro Sintático:</h3>" 
-                                + "<p>" + e.getMessage() + "</p></html>");
+            tratarErro(e.getMessage(), true);
         } catch (TokenMgrError e) {
-            painelGeral.setText("<html><h3 style='color:red; font-family:sans-serif;'>Erro Léxico:</h3>" 
-                                + "<p>" + e.getMessage() + "</p></html>");
+            tratarErro(e.getMessage(), false);
         } catch (Exception e) {
-            painelGeral.setText("<html><span style='color:red;'>Erro Inesperado:<br>" 
-                                + e.getMessage() + "</span></html>");
-            e.printStackTrace(); 
+            consoleArea.setText("<html><font color='red'>Erro Fatal: " + e.getMessage() + "</font></html>");
         } finally {
-            // Restaura o System.out para não travar o IDE
             System.setOut(originalOut);
         }
     }
 
+    private void listarTokens(String codigo) {
+        StringBuilder sb = new StringBuilder();
+        InputStream is = new ByteArrayInputStream(codigo.getBytes());
+        RusskiyCompilerTokenManager tm = new RusskiyCompilerTokenManager(new SimpleCharStream(is));
+        
+        Token t = tm.getNextToken();
+        while (t.kind != RusskiyCompilerConstants.EOF) {
+            String nomeToken = RusskiyCompilerConstants.tokenImage[t.kind];
+            nomeToken = nomeToken.replace("\"", ""); 
+            
+            sb.append(String.format("L:%d | %s -> %s\n", t.beginLine, nomeToken, t.image));
+            t = tm.getNextToken();
+        }
+        tokensArea.setText(sb.toString());
+    }
+
+    private void tratarErro(String msgOriginal, boolean isSintatico) {
+        String msgTraduzida = msgOriginal
+                .replace("Encountered", "Encontrado")
+                .replace("at line", "na linha")
+                .replace("column", "coluna")
+                .replace("Expected:", "Esperado:")
+                .replace("Lexical error", "Erro Lexico")
+                .replace("Was expecting one of:", "Era esperado um destes:");
+
+        int linhaErro = 1;
+        Pattern p = Pattern.compile("linha (\\d+)");
+        Matcher m = p.matcher(msgTraduzida);
+        if (m.find()) {
+            linhaErro = Integer.parseInt(m.group(1));
+        }
+
+        realcarLinhaErro(linhaErro);
+
+        String tipo = isSintatico ? "Erro Sintatico" : "Erro Lexico";
+        consoleArea.setText("<html><h3 style='color:red'>" + tipo + "</h3><p>" + msgTraduzida + "</p></html>");
+    }
+
+    private void realcarLinhaErro(int linha) {
+        try {
+            int start = editorArea.getLineStartOffset(linha - 1);
+            int end = editorArea.getLineEndOffset(linha - 1);
+            DefaultHighlighter.DefaultHighlightPainter painter = 
+                new DefaultHighlighter.DefaultHighlightPainter(new Color(255, 200, 200));
+            editorArea.getHighlighter().addHighlight(start, end, painter);
+        } catch (Exception e) {
+        }
+    }
+    
+    private void gerarCodigoC() {
+       JOptionPane.showMessageDialog(this, "Codigo C gerado (Verifique a pasta do projeto!)");
+    }
+
+    private void limparInterface() {
+        consoleArea.setText("");
+        arvoreArea.setText("");
+        tokensArea.setText("");
+        editorArea.getHighlighter().removeAllHighlights();
+    }
+
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
-        SwingUtilities.invokeLater(() -> new InterfaceCompilador());
+        SwingUtilities.invokeLater(InterfaceCompilador::new);
     }
 }
