@@ -26,8 +26,16 @@ public class RusskiyCompiler implements RusskiyCompilerConstants {
       }
     }
 
-/// =============================
-// Gramática 
+  void error_skipto(int kind) throws ParseException {ParseException e = generateParseException();
+  System.out.println(e.getMessage());
+  Token t;
+  do {
+    t = getNextToken();
+  } while (t.kind != kind && t.kind != EOF);
+  }
+
+// =============================
+// Gramática com AST e Pânico
 // =============================
   final public 
 void Programa() throws ParseException {No raiz = new No("PROGRAMA"); No filho;
@@ -54,14 +62,14 @@ void Programa() throws ParseException {No raiz = new No("PROGRAMA"); No filho;
         break label_1;
       }
       filho = Comando();
-raiz.addFilho(filho);
+if (filho != null) raiz.addFilho(filho);
     }
     jj_consume_token(0);
-System.out.println("\n=== \u00c1RVORE SINT\u00c1TICA ===\n");
-        raiz.imprimir("", true);
+System.out.println("\n=== ARVORE SINTATICA ===\n");
+        raiz.imprimirRaiz();
 }
 
-  final public No Comando() throws ParseException {No n;
+  final public No Comando() throws ParseException {No n = null;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case IF:{
       n = Condicional();
@@ -131,14 +139,20 @@ n.addFilho(new No("Comando", "vvod"));
     throw new Error("Missing return statement in function");
 }
 
-  final public No FraseFinalizada() throws ParseException {No n;
-    n = Frase();
-    jj_consume_token(SEMICOLON);
+// --- MODO PÂNICO ---
+  final public No FraseFinalizada() throws ParseException {No n = null;
+    try {
+      n = Frase();
+      jj_consume_token(SEMICOLON);
 {if ("" != null) return n;}
+    } catch (ParseException e) {
+error_skipto(SEMICOLON);
+        {if ("" != null) return new No("[ERRO DE SINTAXE]");}
+    }
     throw new Error("Missing return statement in function");
 }
 
-  final public No Frase() throws ParseException {No expr; No n = new No("Frase"); Token t; No atrib;
+  final public No Frase() throws ParseException {No expr; No n = new No("Frase"); No atrib;
     expr = Expressao();
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case INC:
@@ -149,9 +163,9 @@ n.addFilho(new No("Comando", "vvod"));
         jj_consume_token(ASSIGN);
         atrib = Expressao();
 n = new No("Atribuicao");
-             n.addFilho(expr); // Variável
+             n.addFilho(expr);
              n.addFilho(new No("Operador", "="));
-             n.addFilho(atrib); // Valor
+             n.addFilho(atrib);
              {if ("" != null) return n;}
         break;
         }
@@ -241,14 +255,17 @@ n.addFilho(tipo);
     throw new Error("Missing return statement in function");
 }
 
-  final public No Condicional() throws ParseException {No n = new No("IF"); No cond; No cmd;
+  final public No Condicional() throws ParseException {No n = new No("IF");
+    No cond;
+    No cmd;
+    No blocoIf = new No("Bloco True");
+    No blocoElse = null;
     jj_consume_token(IF);
     jj_consume_token(LPAREN);
     cond = Expressao();
     jj_consume_token(RPAREN);
     jj_consume_token(LBRACE);
 n.addFilho(cond);
-        No blocoIf = new No("Bloco True");
     label_2:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -280,7 +297,7 @@ n.addFilho(blocoIf);
     case ELSE:{
       jj_consume_token(ELSE);
       jj_consume_token(LBRACE);
-No blocoElse = new No("Bloco Else");
+blocoElse = new No("Bloco Else");
       label_3:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -318,13 +335,16 @@ n.addFilho(blocoElse);
     throw new Error("Missing return statement in function");
 }
 
-  final public No Iteracao() throws ParseException {No n = new No("WHILE"); No cond; No cmd;
+  final public No Iteracao() throws ParseException {No n = new No("WHILE");
+    No cond;
+    No cmd;
+    No bloco = new No("Bloco Loop");
     jj_consume_token(WHILE);
     jj_consume_token(LPAREN);
     cond = Expressao();
     jj_consume_token(RPAREN);
     jj_consume_token(LBRACE);
-n.addFilho(cond); No bloco = new No("Bloco Loop");
+n.addFilho(cond);
     label_4:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -560,10 +580,10 @@ No novoPai = new No("Op.Multiplicativo", op.image);
 	   jj_la1_init_1();
 	}
 	private static void jj_la1_init_0() {
-	   jj_la1_0 = new int[] {0x39f00,0x39f00,0x30000,0x4c00000,0x4c00000,0x4000000,0xf00,0x39f00,0x39f00,0x2000,0x39f00,0x183c0000,0x183c0000,0x60000000,0x60000000,0x83000000,0x83000000,0x0,};
+	   jj_la1_0 = new int[] {0x73e00,0x73e00,0x60000,0x9800000,0x9800000,0x8000000,0x1e00,0x73e00,0x73e00,0x4000,0x73e00,0x30780000,0x30780000,0xc0000000,0xc0000000,0x6000000,0x6000000,0x0,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0xe04,0xe04,0x0,0x0,0x0,0x0,0x0,0xe04,0xe04,0x0,0xe04,0x0,0x0,0x0,0x0,0x3,0x3,0xe04,};
+	   jj_la1_1 = new int[] {0x1c08,0x1c08,0x0,0x0,0x0,0x0,0x0,0x1c08,0x1c08,0x0,0x1c08,0x0,0x0,0x0,0x0,0x7,0x7,0x1c08,};
 	}
 
   /** Constructor with InputStream. */
@@ -688,7 +708,7 @@ No novoPai = new No("Op.Multiplicativo", op.image);
   /** Generate ParseException. */
   public ParseException generateParseException() {
 	 jj_expentries.clear();
-	 boolean[] la1tokens = new boolean[44];
+	 boolean[] la1tokens = new boolean[45];
 	 if (jj_kind >= 0) {
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
@@ -705,7 +725,7 @@ No novoPai = new No("Op.Multiplicativo", op.image);
 		 }
 	   }
 	 }
-	 for (int i = 0; i < 44; i++) {
+	 for (int i = 0; i < 45; i++) {
 	   if (la1tokens[i]) {
 		 jj_expentry = new int[1];
 		 jj_expentry[0] = i;

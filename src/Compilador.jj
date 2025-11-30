@@ -31,8 +31,26 @@ public class RusskiyCompiler {
 }
 PARSER_END(RusskiyCompiler)
 
+// ==========================================
+// CÓDIGO JAVACC (RECUPERAÇÃO DE ERRO)
+// ==========================================
+
+JAVACODE
+void error_skipto(int kind) {
+  ParseException e = generateParseException();
+  System.out.println(e.getMessage());
+  Token t;
+  do {
+    t = getNextToken();
+  } while (t.kind != kind && t.kind != EOF);
+}
+
+// ==========================================
+// TOKENS E REGRAS
+// ==========================================
+
 SKIP : {
-    " " | "\t" | "\n" | "\r"
+    " " | "\t" | "\n" | "\r" | "\u00a0"
 }
 
 // --- Comentários ---
@@ -83,13 +101,13 @@ TOKEN : {
   | < MOD       : "%"                    > 
 
   // --- Pontuação ---
-  | < LPAREN    : "("                    >
-  | < RPAREN    : ")"                    >
-  | < LBRACE    : "{"                    >
-  | < RBRACE    : "}"                    >
-  | < SEMICOLON : ";"                    >
-  | < COMMA     : ","                    >
-  | < DOT       : "."                    >
+  | < LPAREN    : "("                    > 
+  | < RPAREN    : ")"                    > 
+  | < LBRACE    : "{"                    > 
+  | < RBRACE    : "}"                    > 
+  | < SEMICOLON : ";"                    > 
+  | < COMMA     : ","                    > 
+  | < DOT       : "."                    > 
 
   // --- Literais ---
   | < IDENTIFIER : ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
@@ -97,24 +115,24 @@ TOKEN : {
   | < STRING_LITERAL : "\"" (~["\"","\n","\r"])* "\"" >
 }
 
-/// =============================
-// Gramática 
+// =============================
+// Gramática com AST e Pânico
 // =============================
 
 void Programa() : { No raiz = new No("PROGRAMA"); No filho; }
 {
     ( 
       filho = Comando() 
-      { raiz.addFilho(filho); }
+      { if (filho != null) raiz.addFilho(filho); } 
     )* <EOF>
 
     { 
-        System.out.println("\n=== ÁRVORE SINTÁTICA ===\n");
-        raiz.imprimir("", true); 
+        System.out.println("\n=== ARVORE SINTATICA ===\n");
+        raiz.imprimirRaiz(); 
     }
 }
 
-No Comando() : { No n; }
+No Comando() : { No n = null; }
 {
     (
       n = Condicional() 
@@ -143,13 +161,20 @@ No IO() : { No n = new No("IO"); No expr; Token t; }
     }
 }
 
-No FraseFinalizada() : { No n; }
+// --- MODO PÂNICO ---
+No FraseFinalizada() : { No n = null; }
 {
-    n = Frase() <SEMICOLON>
-    { return n; }
+    try {
+        n = Frase() <SEMICOLON>
+        { return n; }
+    }
+    catch (ParseException e) {
+        error_skipto(SEMICOLON);
+        return new No("[ERRO DE SINTAXE]"); 
+    }
 }
 
-No Frase() : { No expr; No n = new No("Frase"); Token t; No atrib; }
+No Frase() : { No expr; No n = new No("Frase"); No atrib; }
 {
     expr = Expressao() 
     (
@@ -157,9 +182,9 @@ No Frase() : { No expr; No n = new No("Frase"); Token t; No atrib; }
         <ASSIGN> atrib = Expressao()
         { 
              n = new No("Atribuicao");
-             n.addFilho(expr); // Variável
+             n.addFilho(expr); 
              n.addFilho(new No("Operador", "="));
-             n.addFilho(atrib); // Valor
+             n.addFilho(atrib); 
              return n;
         }
       | 
@@ -209,19 +234,24 @@ No TipoEspecificador() : { Token t; }
     { return new No("Tipo", t.image); }
 }
 
-No Condicional() : { No n = new No("IF"); No cond; No cmd; }
+No Condicional() : { 
+    No n = new No("IF"); 
+    No cond; 
+    No cmd; 
+    No blocoIf = new No("Bloco True");
+    No blocoElse = null;
+}
 {
     <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE> 
     { 
         n.addFilho(cond); 
-        No blocoIf = new No("Bloco True");
     }
     ( cmd=Comando() { blocoIf.addFilho(cmd); } )* <RBRACE>
     { n.addFilho(blocoIf); }
     
     [ 
       <ELSE> <LBRACE> 
-      { No blocoElse = new No("Bloco Else"); }
+      { blocoElse = new No("Bloco Else"); }
       ( cmd=Comando() { blocoElse.addFilho(cmd); } )* <RBRACE> 
       { n.addFilho(blocoElse); }
     ]
@@ -229,10 +259,15 @@ No Condicional() : { No n = new No("IF"); No cond; No cmd; }
     { return n; }
 }
 
-No Iteracao() : { No n = new No("WHILE"); No cond; No cmd; }
+No Iteracao() : { 
+    No n = new No("WHILE"); 
+    No cond; 
+    No cmd; 
+    No bloco = new No("Bloco Loop");
+}
 {
     <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
-    { n.addFilho(cond); No bloco = new No("Bloco Loop"); }
+    { n.addFilho(cond); }
     ( cmd=Comando() { bloco.addFilho(cmd); } )* <RBRACE>
     { 
         n.addFilho(bloco); 
@@ -295,8 +330,8 @@ No ExpressaoMultiplicativa() : { No atual, prox; Token op; }
 
 No Termo() : { Token t; No n; }
 {
-    t=<IDENTIFIER> { return new No("Var", t.image); }
-  | t=<NUMBER>     { return new No("Num", t.image); }
+    t=<IDENTIFIER>     { return new No("Var", t.image); }
+  | t=<NUMBER>         { return new No("Num", t.image); }
   | t=<STRING_LITERAL> { return new No("String", t.image); }
   | <LPAREN> n=Expressao() <RPAREN> { return n; }
 }
