@@ -8,7 +8,7 @@ public class RusskiyCompiler implements RusskiyCompilerConstants {
 
       while (true) {
         System.out.println("------------------------------------------------");
-        System.out.println("Nachalo - Compilador Russo (Digite ou CTRL+C para sair):");
+        System.out.println("Nachalo - Compilador Russo (Digite CTRL+C para sair):");
         System.out.print("> ");
 
         try {
@@ -104,7 +104,7 @@ System.out.println("\n=== ARVORE SINTATICA ===\n");
       throw new ParseException();
     }
 {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No IO() throws ParseException {No n = new No("IO"); No expr; Token t;
@@ -136,7 +136,7 @@ n.addFilho(new No("Comando", "vvod"));
       jj_consume_token(-1);
       throw new ParseException();
     }
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
 // --- MODO PÂNICO ---
@@ -149,7 +149,7 @@ n.addFilho(new No("Comando", "vvod"));
 error_skipto(SEMICOLON);
         {if ("" != null) return new No("[ERRO DE SINTAXE]");}
     }
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No Frase() throws ParseException {No expr; No n = new No("Frase"); No atrib;
@@ -195,7 +195,7 @@ n = new No("Decremento");
       ;
     }
 {if ("" != null) return expr;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No Declaracao() throws ParseException {No n = new No("Declaracao"); No tipo; Token t; No inic = null;
@@ -210,7 +210,7 @@ n.addFilho(tipo);
             n.addFilho(inic);
         }
         {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No OpcionalInicializacao() throws ParseException {No expr = null;
@@ -225,7 +225,7 @@ n.addFilho(tipo);
       ;
     }
 {if ("" != null) return expr;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No TipoEspecificador() throws ParseException {Token t;
@@ -252,7 +252,7 @@ n.addFilho(tipo);
       throw new ParseException();
     }
 {if ("" != null) return new No("Tipo", t.image);}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No Condicional() throws ParseException {No n = new No("IF");
@@ -332,7 +332,7 @@ n.addFilho(blocoElse);
       ;
     }
 {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No Iteracao() throws ParseException {No n = new No("WHILE");
@@ -373,13 +373,13 @@ bloco.addFilho(cmd);
     jj_consume_token(RBRACE);
 n.addFilho(bloco);
         {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No Expressao() throws ParseException {No n;
     n = ExpressaoRelacional();
 {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No ExpressaoRelacional() throws ParseException {No atual, prox; Token op;
@@ -437,7 +437,7 @@ No novoPai = new No("Op.Relacional", op.image);
           atual = novoPai;
     }
 {if ("" != null) return atual;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No ExpressaoAditiva() throws ParseException {No atual, prox; Token op;
@@ -475,7 +475,7 @@ No novoPai = new No("Op.Aditivo", op.image);
           atual = novoPai;
     }
 {if ("" != null) return atual;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No ExpressaoMultiplicativa() throws ParseException {No atual, prox; Token op;
@@ -528,7 +528,7 @@ No novoPai = new No("Op.Multiplicativo", op.image);
           atual = novoPai;
     }
 {if ("" != null) return atual;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   final public No Termo() throws ParseException {Token t; No n;
@@ -560,7 +560,7 @@ No novoPai = new No("Op.Multiplicativo", op.image);
       jj_consume_token(-1);
       throw new ParseException();
     }
-    throw new Error("Missing return statement in function");
+    throw new Error("Ausência do retorno da declaração na função");
 }
 
   /** Generated Token Manager. */
