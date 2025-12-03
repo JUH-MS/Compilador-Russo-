@@ -18,6 +18,7 @@ public class InterfaceCompilador extends JFrame {
     private JTextArea lineNumbers;
 
     public InterfaceCompilador() {
+        //tela
         super("Compilador Russo - IDE");
         setSize(1000, 750);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -114,6 +115,7 @@ public class InterfaceCompilador extends JFrame {
     }
 
     private void compilarCodigo() {
+        int x = 0;
         String codigo = editorArea.getText();
         limparInterface();
 
@@ -130,18 +132,26 @@ public class InterfaceCompilador extends JFrame {
 
             arvoreArea.setText(baos.toString());
 
-            consoleArea.setText("<html><h3 style='color:green'>Compilacao com Sucesso!</h3></html>");
-
-        } catch (ParseException e) {
+        } catch (ParseException e) { //nao pega todos os erros (só os que envolvem símbolos)
             tratarErro(e.getMessage(), true);
-        } catch (TokenMgrError e) {
+            x = 1;
+        } catch (TokenMgrError e) { //nao tá funcionando
             tratarErro(e.getMessage(), false);
-        } catch (Exception e) {
+            x = 1;
+        } catch (Exception e) { //tmb n tá funcionando?
             consoleArea.setText("<html><font color='red'>Erro Fatal: " + e.getMessage() + "</font></html>");
+            x = 1;
         } finally {
             System.setOut(originalOut);
+            //como caralhos dá pra ter uma saida se todos os tolkens sao consumidos sem nenhum armazenamento dos prints ou dos valores???
+            //usando C?
+            //se no if nao tiver tudo na msm linha só vai aparecer a ultima linha na tela
+            if (x == 0){
+                consoleArea.setText("<html><h3 style='color:green'>Compilacao com Sucesso!</h3> <br> <h3 style='color:black'>" + baos + "</h3> </html>"); 
+            }
         }
     }
+
 
     private void listarTokens(String codigo) {
         StringBuilder sb = new StringBuilder();
