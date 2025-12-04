@@ -75,11 +75,11 @@ public interface RusskiyCompilerConstants {
   /** RegularExpression Id. */
   int DOT = 41;
   /** RegularExpression Id. */
-  int IDENTIFIER = 42;
+  int NUMBER = 42;
   /** RegularExpression Id. */
-  int NUMBER = 43;
+  int STRING_LITERAL = 43;
   /** RegularExpression Id. */
-  int STRING_LITERAL = 44;
+  int IDENTIFIER = 44;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -130,9 +130,9 @@ public interface RusskiyCompilerConstants {
     "\";\"",
     "\",\"",
     "\".\"",
-    "<IDENTIFIER>",
     "<NUMBER>",
     "<STRING_LITERAL>",
+    "<IDENTIFIER>",
   };
 
 }
