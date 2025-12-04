@@ -1,12 +1,11 @@
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.HashMap;
+import java.util.regex.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import javax.swing.event.*;
 import javax.swing.text.DefaultHighlighter;
 
 public class InterfaceCompilador extends JFrame {
@@ -16,10 +15,12 @@ public class InterfaceCompilador extends JFrame {
     private JTextArea arvoreArea;
     private JTextArea tokensArea;
     private JTextArea lineNumbers;
+    
+    private No raizArvore = null;
 
     public InterfaceCompilador() {
         super("Compilador Russo - IDE");
-        setSize(1000, 750);
+        setSize(1100, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         setLocationRelativeTo(null);
@@ -31,7 +32,7 @@ public class InterfaceCompilador extends JFrame {
         JButton btnAbrir = new JButton("Abrir");
         btnAbrir.addActionListener(e -> abrirArquivo());
         
-        JButton btnCompilar = new JButton("Compilar");
+        JButton btnCompilar = new JButton("Compilar e Executar");
         btnCompilar.setBackground(new Color(200, 255, 200));
         btnCompilar.addActionListener(e -> compilarCodigo());
         
@@ -63,13 +64,13 @@ public class InterfaceCompilador extends JFrame {
         JScrollPane scrollEditor = new JScrollPane(editorArea);
         scrollEditor.setRowHeaderView(lineNumbers);
 
-        // --- ABAS (CONSOLE, ARVORE, TOKENS) ---
+        // --- ABAS INFERIORES ---
         JTabbedPane tabbedPane = new JTabbedPane();
 
         consoleArea = new JTextPane();
         consoleArea.setContentType("text/html");
         consoleArea.setEditable(false);
-        tabbedPane.addTab("Console / Erros", new JScrollPane(consoleArea));
+        tabbedPane.addTab("Terminal / Saida", new JScrollPane(consoleArea));
 
         arvoreArea = new JTextArea();
         arvoreArea.setEditable(false);
@@ -79,7 +80,7 @@ public class InterfaceCompilador extends JFrame {
         tokensArea = new JTextArea();
         tokensArea.setEditable(false);
         tokensArea.setFont(new Font("Consolas", Font.PLAIN, 14));
-        tabbedPane.addTab("Lista de Tokens", new JScrollPane(tokensArea));
+        tabbedPane.addTab("Tokens", new JScrollPane(tokensArea));
 
         JSplitPane splitPrincipal = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollEditor, tabbedPane);
         splitPrincipal.setDividerLocation(450);
@@ -98,17 +99,13 @@ public class InterfaceCompilador extends JFrame {
     private void abrirArquivo() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Arquivos de Texto", "txt", "rus"));
-        
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
-                File selectedFile = fileChooser.getSelectedFile();
-                String content = Files.readString(selectedFile.toPath());
-                editorArea.setText(content);
+                editorArea.setText(Files.readString(fileChooser.getSelectedFile().toPath()));
                 atualizarLinhas();
-                consoleArea.setText("<html><font color='blue'>Arquivo carregado: " + selectedFile.getName() + "</font></html>");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro ao ler arquivo: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
             }
         }
     }
@@ -116,30 +113,52 @@ public class InterfaceCompilador extends JFrame {
     private void compilarCodigo() {
         String codigo = editorArea.getText();
         limparInterface();
+        this.raizArvore = null;
 
         PrintStream originalOut = System.out;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(baos));
+        ByteArrayOutputStream baosArvore = new ByteArrayOutputStream();
+        ByteArrayOutputStream baosExecucao = new ByteArrayOutputStream();
+
+        StringBuilder htmlFinal = new StringBuilder("<html><body style='font-family:Consolas;'>");
 
         try {
             listarTokens(codigo);
 
             InputStream is = new ByteArrayInputStream(codigo.getBytes());
             RusskiyCompiler parser = new RusskiyCompiler(is);
-            parser.Programa(); 
+            
+            System.setOut(new PrintStream(baosArvore)); 
+            this.raizArvore = parser.Programa(); 
+            
+            arvoreArea.setText(baosArvore.toString());
 
-            arvoreArea.setText(baos.toString());
+            htmlFinal.append("<h2 style='color:green;'>✔ Compilado com Sucesso!</h2>");
+            htmlFinal.append("<hr><b>Saida do Programa:</b><br><br>");
 
-            consoleArea.setText("<html><h3 style='color:green'>Compilacao com Sucesso!</h3></html>");
+            // --- EXECUCAO ---
+            if (this.raizArvore != null) {
+                System.setOut(new PrintStream(baosExecucao)); // Captura System.out.println
+                
+                // Mapa de memória para variáveis
+                this.raizArvore.executar(new HashMap<>());
+                
+                String saidaTexto = baosExecucao.toString();
+                if(saidaTexto.isEmpty()) saidaTexto = "(Nenhuma saida de dados)";
+                
+                htmlFinal.append("<span style='color:blue;'>" + saidaTexto.replace("\n", "<br>") + "</span>");
+            }
 
         } catch (ParseException e) {
-            tratarErro(e.getMessage(), true);
+            tratarErro(e.getMessage(), true, htmlFinal);
         } catch (TokenMgrError e) {
-            tratarErro(e.getMessage(), false);
+            tratarErro(e.getMessage(), false, htmlFinal);
         } catch (Exception e) {
-            consoleArea.setText("<html><font color='red'>Erro Fatal: " + e.getMessage() + "</font></html>");
+            htmlFinal.append("<h3 style='color:red;'>Erro de Execucao:</h3>");
+            htmlFinal.append("<p>" + e.getMessage() + "</p>");
         } finally {
-            System.setOut(originalOut);
+            System.setOut(originalOut); 
+            htmlFinal.append("</body></html>");
+            consoleArea.setText(htmlFinal.toString());
         }
     }
 
@@ -147,53 +166,72 @@ public class InterfaceCompilador extends JFrame {
         StringBuilder sb = new StringBuilder();
         InputStream is = new ByteArrayInputStream(codigo.getBytes());
         RusskiyCompilerTokenManager tm = new RusskiyCompilerTokenManager(new SimpleCharStream(is));
-        
         Token t = tm.getNextToken();
         while (t.kind != RusskiyCompilerConstants.EOF) {
-            String nomeToken = RusskiyCompilerConstants.tokenImage[t.kind];
-            nomeToken = nomeToken.replace("\"", ""); 
-            
+            String nomeToken = RusskiyCompilerConstants.tokenImage[t.kind].replace("\"", "");
             sb.append(String.format("L:%d | %s -> %s\n", t.beginLine, nomeToken, t.image));
             t = tm.getNextToken();
         }
         tokensArea.setText(sb.toString());
     }
 
-    private void tratarErro(String msgOriginal, boolean isSintatico) {
+    private void tratarErro(String msgOriginal, boolean isSintatico, StringBuilder html) {
+        // Regex poderosa para achar a linha em qualquer formato de erro
+        // Procura por "line X" ou "linha X" (case insensitive)
+        int linhaErro = -1;
+        Pattern p = Pattern.compile("(line|linha)\\s*:?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(msgOriginal);
+        if (m.find()) {
+            linhaErro = Integer.parseInt(m.group(2));
+            realcarLinhaErro(linhaErro);
+        }
+
         String msgTraduzida = msgOriginal
                 .replace("Encountered", "Encontrado")
                 .replace("at line", "na linha")
                 .replace("column", "coluna")
                 .replace("Expected:", "Esperado:")
                 .replace("Lexical error", "Erro Lexico")
-                .replace("Was expecting one of:", "Era esperado um destes:");
+                .replace("Was expecting one of:", "Esperava um destes:");
 
-        int linhaErro = 1;
-        Pattern p = Pattern.compile("linha (\\d+)");
-        Matcher m = p.matcher(msgTraduzida);
-        if (m.find()) {
-            linhaErro = Integer.parseInt(m.group(1));
+        String titulo = isSintatico ? "❌ Erro Sintatico / Semantico" : "❌ Erro Lexico";
+        html.append("<h3 style='color:red;'>" + titulo + "</h3>");
+        html.append("<p>" + msgTraduzida + "</p>");
+        
+        if (linhaErro != -1) {
+            html.append("<p><b>Erro detectado na linha: " + linhaErro + "</b></p>");
         }
-
-        realcarLinhaErro(linhaErro);
-
-        String tipo = isSintatico ? "Erro Sintatico" : "Erro Lexico";
-        consoleArea.setText("<html><h3 style='color:red'>" + tipo + "</h3><p>" + msgTraduzida + "</p></html>");
     }
 
     private void realcarLinhaErro(int linha) {
         try {
+            // Swing conta linhas a partir do 0, JavaCC a partir do 1
             int start = editorArea.getLineStartOffset(linha - 1);
             int end = editorArea.getLineEndOffset(linha - 1);
-            DefaultHighlighter.DefaultHighlightPainter painter = 
-                new DefaultHighlighter.DefaultHighlightPainter(new Color(255, 200, 200));
-            editorArea.getHighlighter().addHighlight(start, end, painter);
+            editorArea.getHighlighter().addHighlight(start, end, 
+                new DefaultHighlighter.DefaultHighlightPainter(new Color(255, 200, 200)));
         } catch (Exception e) {
+            // Se a linha não existir (ex: erro no EOF), ignora o highlight
         }
     }
     
     private void gerarCodigoC() {
-       JOptionPane.showMessageDialog(this, "Codigo C gerado (Verifique a pasta do projeto!)");
+        if (this.raizArvore == null) {
+            JOptionPane.showMessageDialog(this, "Voce precisa compilar com sucesso primeiro!");
+            return;
+        }
+        try {
+            String codigoC = this.raizArvore.gerarC();
+            File arquivoSaida = new File("saida.c");
+            Files.writeString(arquivoSaida.toPath(), codigoC);
+            JOptionPane.showMessageDialog(this, "Arquivo 'saida.c' gerado com sucesso!");
+            
+            String htmlC = "<html><h3 style='color:blue'>Codigo C Gerado:</h3><pre>" + codigoC + "</pre></html>";
+            consoleArea.setText(htmlC);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao salvar arquivo: " + e.getMessage());
+        }
     }
 
     private void limparInterface() {
