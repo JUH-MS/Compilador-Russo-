@@ -69,7 +69,7 @@ if (filho != null) raiz.addFilho(filho);
 // --- CORREÇÃO: Manda imprimir a árvore para a interface capturar ---
         raiz.imprimirRaiz();
         {if ("" != null) return raiz;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Comando() throws ParseException {No n = null;
@@ -107,7 +107,7 @@ if (filho != null) raiz.addFilho(filho);
       throw new ParseException();
     }
 {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No IO() throws ParseException {No n = new No("IO"); No expr; Token t;
@@ -140,7 +140,7 @@ if (!tabelaSimbolos.contains(t.image)) {
       jj_consume_token(-1);
       throw new ParseException();
     }
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No FraseFinalizada() throws ParseException {No n = null;
@@ -152,7 +152,7 @@ if (!tabelaSimbolos.contains(t.image)) {
 error_skipto(SEMICOLON);
         {if ("" != null) return new No("[ERRO]");}
     }
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Frase() throws ParseException {No expr; No n = new No("Frase"); No atrib;
@@ -190,7 +190,7 @@ n = new No("Decremento"); n.addFilho(expr); {if ("" != null) return n;}
       ;
     }
 {if ("" != null) return expr;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Declaracao() throws ParseException {No n = new No("Declaracao"); No tipo; Token t; No inic = null;
@@ -205,7 +205,7 @@ if (tabelaSimbolos.contains(t.image)) {
 n.addFilho(tipo); n.addFilho(new No("Var", t.image));
         if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
         {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No OpcionalInicializacao() throws ParseException {No expr = null;
@@ -220,7 +220,7 @@ n.addFilho(tipo); n.addFilho(new No("Var", t.image));
       ;
     }
 {if ("" != null) return expr;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No TipoEspecificador() throws ParseException {Token t;
@@ -247,7 +247,7 @@ n.addFilho(tipo); n.addFilho(new No("Var", t.image));
       throw new ParseException();
     }
 {if ("" != null) return new No("Tipo", t.image);}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Condicional() throws ParseException {No n = new No("IF"); No cond; No cmd; No blocoIf = new No("Bloco True"); No blocoElse = null;
@@ -323,7 +323,7 @@ n.addFilho(blocoElse);
       ;
     }
 {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Iteracao() throws ParseException {No n = new No("WHILE"); No cond; No cmd; No bloco = new No("Bloco Loop");
@@ -360,13 +360,13 @@ bloco.addFilho(cmd);
     }
     jj_consume_token(RBRACE);
 n.addFilho(bloco); {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Expressao() throws ParseException {No n;
     n = ExpressaoRelacional();
 {if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No ExpressaoRelacional() throws ParseException {No atual, prox; Token op;
@@ -421,7 +421,7 @@ n.addFilho(bloco); {if ("" != null) return n;}
 No novoPai = new No("Op.Relacional", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai;
     }
 {if ("" != null) return atual;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No ExpressaoAditiva() throws ParseException {No atual, prox; Token op;
@@ -456,7 +456,7 @@ No novoPai = new No("Op.Relacional", op.image); novoPai.addFilho(atual); novoPai
 No novoPai = new No("Op.Aditivo", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai;
     }
 {if ("" != null) return atual;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No ExpressaoMultiplicativa() throws ParseException {No atual, prox; Token op;
@@ -506,7 +506,7 @@ No novoPai = new No("Op.Aditivo", op.image); novoPai.addFilho(atual); novoPai.ad
 No novoPai = new No("Op.Multiplicativo", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai;
     }
 {if ("" != null) return atual;}
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   final public No Termo() throws ParseException {Token t; No n;
@@ -541,7 +541,7 @@ if (!tabelaSimbolos.contains(t.image)) {
       jj_consume_token(-1);
       throw new ParseException();
     }
-    throw new Error("Missing return statement in function");
+    throw new Error("Falta o retorndo da declaracao na funcao");
 }
 
   /** Generated Token Manager. */
