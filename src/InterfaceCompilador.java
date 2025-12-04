@@ -1,12 +1,10 @@
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.regex.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import javax.swing.event.*;
 import javax.swing.text.DefaultHighlighter;
 
 public class InterfaceCompilador extends JFrame {
@@ -16,6 +14,8 @@ public class InterfaceCompilador extends JFrame {
     private JTextArea arvoreArea;
     private JTextArea tokensArea;
     private JTextArea lineNumbers;
+    
+    private No raizArvore = null;
 
     public InterfaceCompilador() {
         super("Compilador Russo - IDE");
@@ -63,7 +63,7 @@ public class InterfaceCompilador extends JFrame {
         JScrollPane scrollEditor = new JScrollPane(editorArea);
         scrollEditor.setRowHeaderView(lineNumbers);
 
-        // --- ABAS (CONSOLE, ARVORE, TOKENS) ---
+        // --- ABAS ---
         JTabbedPane tabbedPane = new JTabbedPane();
 
         consoleArea = new JTextPane();
@@ -116,20 +116,23 @@ public class InterfaceCompilador extends JFrame {
     private void compilarCodigo() {
         String codigo = editorArea.getText();
         limparInterface();
-
+        this.raizArvore = null; 
         PrintStream originalOut = System.out;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));
 
         try {
+
             listarTokens(codigo);
 
             InputStream is = new ByteArrayInputStream(codigo.getBytes());
             RusskiyCompiler parser = new RusskiyCompiler(is);
-            parser.Programa(); 
+            
+            
+            this.raizArvore = parser.Programa(); 
 
-            arvoreArea.setText(baos.toString());
-
+            
+            arvoreArea.setText(baos.toString()); 
             consoleArea.setText("<html><h3 style='color:green'>Compilacao com Sucesso!</h3></html>");
 
         } catch (ParseException e) {
@@ -138,13 +141,15 @@ public class InterfaceCompilador extends JFrame {
             tratarErro(e.getMessage(), false);
         } catch (Exception e) {
             consoleArea.setText("<html><font color='red'>Erro Fatal: " + e.getMessage() + "</font></html>");
+            e.printStackTrace();
         } finally {
-            System.setOut(originalOut);
+            System.setOut(originalOut); 
         }
     }
 
     private void listarTokens(String codigo) {
         StringBuilder sb = new StringBuilder();
+        
         InputStream is = new ByteArrayInputStream(codigo.getBytes());
         RusskiyCompilerTokenManager tm = new RusskiyCompilerTokenManager(new SimpleCharStream(is));
         
@@ -160,6 +165,7 @@ public class InterfaceCompilador extends JFrame {
     }
 
     private void tratarErro(String msgOriginal, boolean isSintatico) {
+        
         String msgTraduzida = msgOriginal
                 .replace("Encountered", "Encontrado")
                 .replace("at line", "na linha")
@@ -168,6 +174,7 @@ public class InterfaceCompilador extends JFrame {
                 .replace("Lexical error", "Erro Lexico")
                 .replace("Was expecting one of:", "Era esperado um destes:");
 
+       
         int linhaErro = 1;
         Pattern p = Pattern.compile("linha (\\d+)");
         Matcher m = p.matcher(msgTraduzida);
@@ -189,11 +196,31 @@ public class InterfaceCompilador extends JFrame {
                 new DefaultHighlighter.DefaultHighlightPainter(new Color(255, 200, 200));
             editorArea.getHighlighter().addHighlight(start, end, painter);
         } catch (Exception e) {
+            
         }
     }
     
     private void gerarCodigoC() {
-       JOptionPane.showMessageDialog(this, "Codigo C gerado (Verifique a pasta do projeto!)");
+        if (this.raizArvore == null) {
+            JOptionPane.showMessageDialog(this, "Voce precisa compilar o codigo com sucesso primeiro!");
+            return;
+        }
+        try {
+            
+            String codigoC = this.raizArvore.gerarC();
+
+           
+            File arquivoSaida = new File("saida.c");
+            Files.writeString(arquivoSaida.toPath(), codigoC);
+
+            JOptionPane.showMessageDialog(this, "Arquivo 'saida.c' gerado com sucesso na pasta do projeto!");
+            
+            
+            consoleArea.setText("<html><h3 style='color:blue'>Codigo C Gerado com Sucesso!</h3><pre>" + codigoC + "</pre></html>");
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao salvar arquivo C: " + e.getMessage());
+        }
     }
 
     private void limparInterface() {

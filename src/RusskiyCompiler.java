@@ -5,22 +5,18 @@ import java.io.*;
 public class RusskiyCompiler implements RusskiyCompilerConstants {
     public static void main(String args[]) throws ParseException {
       RusskiyCompiler parser = new RusskiyCompiler(System.in);
-
       while (true) {
         System.out.println("------------------------------------------------");
         System.out.println("Nachalo - Compilador Russo (Digite ou CTRL+C para sair):");
         System.out.print("> ");
-
         try {
             parser.Programa();
-            System.out.println("\u2714 C\u00f3digo aceito (Slava Russkiy)!");
+            System.out.println("Codigo aceito!");
         } catch (ParseException e) {
-            System.out.println("\u274c Erro sint\u00e1tico:");
-            System.out.println(e.getMessage());
+            System.out.println("Erro sintatico: " + e.getMessage());
             parser.ReInit(System.in);
         } catch (TokenMgrError e) {
-            System.out.println("\u274c Erro l\u00e9xico:");
-            System.out.println(e.getMessage());
+            System.out.println("Erro lexico: " + e.getMessage());
             parser.ReInit(System.in);
         }
       }
@@ -35,10 +31,10 @@ public class RusskiyCompiler implements RusskiyCompilerConstants {
   }
 
 // =============================
-// Gramática com AST e Pânico
+// Gramática
 // =============================
   final public 
-void Programa() throws ParseException {No raiz = new No("PROGRAMA"); No filho;
+No Programa() throws ParseException {No raiz = new No("PROGRAMA"); No filho;
     label_1:
     while (true) {
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
@@ -67,6 +63,8 @@ if (filho != null) raiz.addFilho(filho);
     jj_consume_token(0);
 System.out.println("\n=== ARVORE SINTATICA ===\n");
         raiz.imprimirRaiz();
+        {if ("" != null) return raiz;}
+    throw new Error("Missing return statement in function");
 }
 
   final public No Comando() throws ParseException {No n = null;
@@ -115,9 +113,7 @@ System.out.println("\n=== ARVORE SINTATICA ===\n");
       expr = Expressao();
       jj_consume_token(RPAREN);
       jj_consume_token(SEMICOLON);
-n.addFilho(new No("Comando", "vyvod"));
-        n.addFilho(expr);
-        {if ("" != null) return n;}
+n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); {if ("" != null) return n;}
       break;
       }
     case INPUT:{
@@ -126,9 +122,7 @@ n.addFilho(new No("Comando", "vyvod"));
       t = jj_consume_token(IDENTIFIER);
       jj_consume_token(RPAREN);
       jj_consume_token(SEMICOLON);
-n.addFilho(new No("Comando", "vvod"));
-        n.addFilho(new No("Var", t.image));
-        {if ("" != null) return n;}
+n.addFilho(new No("Comando", "vvod")); n.addFilho(new No("Var", t.image)); {if ("" != null) return n;}
       break;
       }
     default:
@@ -139,7 +133,6 @@ n.addFilho(new No("Comando", "vvod"));
     throw new Error("Missing return statement in function");
 }
 
-// --- MODO PÂNICO ---
   final public No FraseFinalizada() throws ParseException {No n = null;
     try {
       n = Frase();
@@ -162,25 +155,17 @@ error_skipto(SEMICOLON);
       case ASSIGN:{
         jj_consume_token(ASSIGN);
         atrib = Expressao();
-n = new No("Atribuicao");
-             n.addFilho(expr);
-             n.addFilho(new No("Operador", "="));
-             n.addFilho(atrib);
-             {if ("" != null) return n;}
+n = new No("Atribuicao"); n.addFilho(expr); n.addFilho(new No("Operador", "=")); n.addFilho(atrib); {if ("" != null) return n;}
         break;
         }
       case INC:{
         jj_consume_token(INC);
-n = new No("Incremento");
-             n.addFilho(expr);
-             {if ("" != null) return n;}
+n = new No("Incremento"); n.addFilho(expr); {if ("" != null) return n;}
         break;
         }
       case DEC:{
         jj_consume_token(DEC);
-n = new No("Decremento");
-             n.addFilho(expr);
-             {if ("" != null) return n;}
+n = new No("Decremento"); n.addFilho(expr); {if ("" != null) return n;}
         break;
         }
       default:
@@ -203,12 +188,8 @@ n = new No("Decremento");
     t = jj_consume_token(IDENTIFIER);
     inic = OpcionalInicializacao();
     jj_consume_token(SEMICOLON);
-n.addFilho(tipo);
-        n.addFilho(new No("Var", t.image));
-        if (inic != null) {
-            n.addFilho(new No("Inicializacao"));
-            n.addFilho(inic);
-        }
+n.addFilho(tipo); n.addFilho(new No("Var", t.image));
+        if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
         {if ("" != null) return n;}
     throw new Error("Missing return statement in function");
 }
@@ -255,11 +236,7 @@ n.addFilho(tipo);
     throw new Error("Missing return statement in function");
 }
 
-  final public No Condicional() throws ParseException {No n = new No("IF");
-    No cond;
-    No cmd;
-    No blocoIf = new No("Bloco True");
-    No blocoElse = null;
+  final public No Condicional() throws ParseException {No n = new No("IF"); No cond; No cmd; No blocoIf = new No("Bloco True"); No blocoElse = null;
     jj_consume_token(IF);
     jj_consume_token(LPAREN);
     cond = Expressao();
@@ -335,10 +312,7 @@ n.addFilho(blocoElse);
     throw new Error("Missing return statement in function");
 }
 
-  final public No Iteracao() throws ParseException {No n = new No("WHILE");
-    No cond;
-    No cmd;
-    No bloco = new No("Bloco Loop");
+  final public No Iteracao() throws ParseException {No n = new No("WHILE"); No cond; No cmd; No bloco = new No("Bloco Loop");
     jj_consume_token(WHILE);
     jj_consume_token(LPAREN);
     cond = Expressao();
@@ -371,8 +345,7 @@ n.addFilho(cond);
 bloco.addFilho(cmd);
     }
     jj_consume_token(RBRACE);
-n.addFilho(bloco);
-        {if ("" != null) return n;}
+n.addFilho(bloco); {if ("" != null) return n;}
     throw new Error("Missing return statement in function");
 }
 
@@ -431,10 +404,7 @@ n.addFilho(bloco);
         throw new ParseException();
       }
       prox = ExpressaoAditiva();
-No novoPai = new No("Op.Relacional", op.image);
-          novoPai.addFilho(atual);
-          novoPai.addFilho(prox);
-          atual = novoPai;
+No novoPai = new No("Op.Relacional", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai;
     }
 {if ("" != null) return atual;}
     throw new Error("Missing return statement in function");
@@ -469,10 +439,7 @@ No novoPai = new No("Op.Relacional", op.image);
         throw new ParseException();
       }
       prox = ExpressaoMultiplicativa();
-No novoPai = new No("Op.Aditivo", op.image);
-          novoPai.addFilho(atual);
-          novoPai.addFilho(prox);
-          atual = novoPai;
+No novoPai = new No("Op.Aditivo", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai;
     }
 {if ("" != null) return atual;}
     throw new Error("Missing return statement in function");
@@ -522,10 +489,7 @@ No novoPai = new No("Op.Aditivo", op.image);
         throw new ParseException();
       }
       prox = Termo();
-No novoPai = new No("Op.Multiplicativo", op.image);
-          novoPai.addFilho(atual);
-          novoPai.addFilho(prox);
-          atual = novoPai;
+No novoPai = new No("Op.Multiplicativo", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai;
     }
 {if ("" != null) return atual;}
     throw new Error("Missing return statement in function");
