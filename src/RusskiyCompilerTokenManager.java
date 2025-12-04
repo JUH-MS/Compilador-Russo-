@@ -795,7 +795,7 @@ private void jjCheckNAddTwoStates(int state1, int state2)
     public RusskiyCompilerTokenManager(SimpleCharStream stream){
 
       if (SimpleCharStream.staticFlag)
-            throw new Error("ERROR: Cannot use a static CharStream class with a non-static lexical analyzer.");
+            throw new Error("ERRO: Nao se pode usar uma classe CharStream com um analizador lexico nao-estatico.");
 
     input_stream = stream;
   }
@@ -840,7 +840,7 @@ private void jjCheckNAddTwoStates(int state1, int state2)
   public void SwitchTo(int lexState)
   {
     if (lexState >= 2 || lexState < 0)
-      throw new TokenMgrError("Error: Ignoring invalid lexical state : " + lexState + ". State unchanged.", TokenMgrError.INVALID_LEXICAL_STATE);
+      throw new TokenMgrError("ERRO: Ignorando estado lexico invalido : " + lexState + ". Estado nao-modificado.", TokenMgrError.INVALID_LEXICAL_STATE);
     else
       curLexState = lexState;
   }
