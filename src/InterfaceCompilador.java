@@ -143,7 +143,7 @@ public class InterfaceCompilador extends JFrame {
             
             arvoreArea.setText(baosArvore.toString());
 
-            htmlFinal.append("<h2 style='color:green;'>✔ Compilado com Sucesso!</h2>");
+            htmlFinal.append("<h2 style='color:green;'>✔ Compilado com sucesso!</h2>");
             htmlFinal.append("<hr><b>Saida do Programa:</b><br><br>");
 
             // --- EXECUCAO ---
