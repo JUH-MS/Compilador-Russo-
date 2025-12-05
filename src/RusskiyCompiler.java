@@ -379,7 +379,9 @@ n.addFilho(bloco); {if ("" != null) return n;}
       case LE:
       case GE:
       case GT:
-      case LT:{
+      case LT:
+      case E:
+      case OU:{
         ;
         break;
         }
@@ -410,6 +412,14 @@ n.addFilho(bloco); {if ("" != null) return n;}
         }
       case LE:{
         op = jj_consume_token(LE);
+        break;
+        }
+      case E:{
+        op = jj_consume_token(E);
+        break;
+        }
+      case OU:{
+        op = jj_consume_token(OU);
         break;
         }
       default:
@@ -565,7 +575,7 @@ No novoPai = new No("Op.Multiplicativo", op.image); novoPai.addFilho(atual); nov
 	   jj_la1_0 = new int[] {0x73e00,0x73e00,0x60000,0x9800000,0x9800000,0x8000000,0x1e00,0x73e00,0x73e00,0x4000,0x73e00,0x30780000,0x30780000,0xc0000000,0xc0000000,0x6000000,0x6000000,0x0,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0x1c080,0x1c080,0x0,0x0,0x0,0x0,0x0,0x1c080,0x1c080,0x0,0x1c080,0x0,0x0,0x0,0x0,0x7,0x7,0x1c080,};
+	   jj_la1_1 = new int[] {0x1c080,0x1c080,0x0,0x0,0x0,0x0,0x0,0x1c080,0x1c080,0x0,0x1c080,0x18,0x18,0x0,0x0,0x7,0x7,0x1c080,};
 	}
 
   /** Constructor with InputStream. */

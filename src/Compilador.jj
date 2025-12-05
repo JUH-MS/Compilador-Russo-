@@ -237,7 +237,7 @@ No Expressao() : { No n; } { n = ExpressaoRelacional() { return n; } }
 No ExpressaoRelacional() : { No atual, prox; Token op; }
 {
     atual = ExpressaoAditiva() 
-    ( ( op=<EQ> | op=<NEQ> | op=<GT> | op=<LT> | op=<GE> | op=<LE> ) prox = ExpressaoAditiva() 
+    ( ( op=<EQ> | op=<NEQ> | op=<GT> | op=<LT> | op=<GE> | op=<LE> | op=<E> | op=<OU> ) prox = ExpressaoAditiva() 
       { No novoPai = new No("Op.Relacional", op.image); novoPai.addFilho(atual); novoPai.addFilho(prox); atual = novoPai; }
     )* { return atual; }
 }
