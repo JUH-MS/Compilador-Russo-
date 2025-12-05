@@ -35,12 +35,28 @@ PARSER_END(RusskiyCompiler)
 // ==========================================
 // CÓDIGO DE RECUPERAÇÃO (JAVACODE)
 // ==========================================
+
 JAVACODE
 void error_skipto(int kind) {
   ParseException e = generateParseException();
   System.out.println(e.getMessage());
   Token t;
   do { t = getNextToken(); } while (t.kind != kind && t.kind != EOF);
+}
+
+JAVACODE
+void syncToSemicolon() {
+  error_skipto(SEMICOLON);
+}
+
+JAVACODE
+void syncToRbrace() {
+  error_skipto(RBRACE);
+}
+
+JAVACODE
+void syncToStmt() {
+  syncToSemicolon();
 }
 
 // ==========================================
@@ -96,12 +112,11 @@ TOKEN : {
   | < MINUS     : "-"                    > 
   | < MULT      : "*"                    > 
   | < DIV       : "/"                    > 
-  | < MOD       : "%"                    >
+  | < MOD       : "%"                    > 
   | < E         : "/i"                   >
   | < OU        : "ili"                  >
   | < TRUE      : "pravda"               >
   | < FALSE     : "nepravda"             >
-
 
   // --- Pontuação ---
   | < LPAREN    : "("                    > 
@@ -137,24 +152,33 @@ No Programa() : { No raiz = new No("PROGRAMA"); No filho; }
 
 No Comando() : { No n = null; }
 {
-    ( n = Condicional() | n = Iteracao() | n = IO() | n = Declaracao() | n = FraseFinalizada() )
-    { return n; }
+    try {
+        ( n = Condicional() | n = Iteracao() | n = IO() | n = Declaracao() | n = FraseFinalizada() )
+        { return n; }
+    } catch (ParseException e) {
+        syncToStmt();
+        return new No("[ERRO]");
+    }
 }
 
 No IO() : { No n = new No("IO"); No expr; Token t; }
 {
-    <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
-    { n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); return n; }
-    |
-    <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
-    { 
-      // Verifica se variavel existe antes de ler
-      if (!tabelaSimbolos.contains(t.image)) {
-          throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");
-      }
-      n.addFilho(new No("Comando", "vvod")); 
-      n.addFilho(new No("Var", t.image)); 
-      return n; 
+    try {
+        <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
+        { n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); return n; }
+        |
+        <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
+        { 
+          if (!tabelaSimbolos.contains(t.image)) {
+              throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");
+          }
+          n.addFilho(new No("Comando", "vvod")); 
+          n.addFilho(new No("Var", t.image)); 
+          return n; 
+        }
+    } catch (ParseException e) {
+        syncToStmt();
+        return new No("[ERRO]");
     }
 }
 
@@ -184,19 +208,24 @@ No Frase() : { No expr; No n = new No("Frase"); No atrib; }
 
 No Declaracao() : { No n = new No("Declaracao"); No tipo; Token t; No inic = null; }
 {
-    tipo = TipoEspecificador() t=<IDENTIFIER> 
-    {
-       // Verifica duplicidade
-       if (tabelaSimbolos.contains(t.image)) {
-           throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");
-       }
-       tabelaSimbolos.add(t.image);
-    }
-    inic = OpcionalInicializacao() <SEMICOLON>
-    {
-        n.addFilho(tipo); n.addFilho(new No("Var", t.image));
-        if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
-        return n;
+    try {
+        tipo = TipoEspecificador() t=<IDENTIFIER> 
+        {
+           // Verifica duplicidade
+           if (tabelaSimbolos.contains(t.image)) {
+               throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");
+           }
+           tabelaSimbolos.add(t.image);
+        }
+        inic = OpcionalInicializacao() <SEMICOLON>
+        {
+            n.addFilho(tipo); n.addFilho(new No("Var", t.image));
+            if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
+            return n;
+        }
+    } catch (ParseException e) {
+        syncToStmt();
+        return new No("[ERRO]");
     }
 }
 
@@ -213,23 +242,33 @@ No TipoEspecificador() : { Token t; }
 
 No Condicional() : { No n = new No("IF"); No cond; No cmd; No blocoIf = new No("Bloco True"); No blocoElse = null; }
 {
-    <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE> 
-    { n.addFilho(cond); }
-    ( cmd=Comando() { blocoIf.addFilho(cmd); } )* <RBRACE>
-    { n.addFilho(blocoIf); }
-    [ <ELSE> <LBRACE> { blocoElse = new No("Bloco Else"); }
-      ( cmd=Comando() { blocoElse.addFilho(cmd); } )* <RBRACE> 
-      { n.addFilho(blocoElse); }
-    ]
-    { return n; }
+    try {
+        <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE> 
+        { n.addFilho(cond); }
+        ( cmd=Comando() { blocoIf.addFilho(cmd); } )* <RBRACE>
+        { n.addFilho(blocoIf); }
+        [ <ELSE> <LBRACE> { blocoElse = new No("Bloco Else"); }
+          ( cmd=Comando() { blocoElse.addFilho(cmd); } )* <RBRACE> 
+          { n.addFilho(blocoElse); }
+        ]
+        { return n; }
+    } catch (ParseException e) {
+        syncToRbrace();
+        return new No("[ERRO]");
+    }
 }
 
 No Iteracao() : { No n = new No("WHILE"); No cond; No cmd; No bloco = new No("Bloco Loop"); }
 {
-    <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
-    { n.addFilho(cond); }
-    ( cmd=Comando() { bloco.addFilho(cmd); } )* <RBRACE>
-    { n.addFilho(bloco); return n; }
+    try {
+        <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
+        { n.addFilho(cond); }
+        ( cmd=Comando() { bloco.addFilho(cmd); } )* <RBRACE>
+        { n.addFilho(bloco); return n; }
+    } catch (ParseException e) {
+        syncToRbrace();
+        return new No("[ERRO]");
+    }
 }
 
 No Expressao() : { No n; } { n = ExpressaoRelacional() { return n; } }

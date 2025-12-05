@@ -33,6 +33,15 @@ public class RusskiyCompiler implements RusskiyCompilerConstants {
   do { t = getNextToken(); } while (t.kind != kind && t.kind != EOF);
   }
 
+  void syncToSemicolon() throws ParseException {error_skipto(SEMICOLON);
+  }
+
+  void syncToRbrace() throws ParseException {error_skipto(RBRACE);
+  }
+
+  void syncToStmt() throws ParseException {syncToSemicolon();
+  }
+
 // ==========================================
 // GRAMÁTICA (LL1 + AST + Semântica + Pânico)
 // ==========================================
@@ -71,73 +80,82 @@ raiz.imprimirRaiz();
 }
 
   final public No Comando() throws ParseException {No n = null;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case IF:{
-      n = Condicional();
-      break;
+    try {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case IF:{
+        n = Condicional();
+        break;
+        }
+      case WHILE:{
+        n = Iteracao();
+        break;
+        }
+      case PRINT:
+      case INPUT:{
+        n = IO();
+        break;
+        }
+      case VOID:
+      case INT:
+      case FLOAT:
+      case STRING:{
+        n = Declaracao();
+        break;
+        }
+      case LPAREN:
+      case IDENTIFIER:
+      case NUMBER:
+      case STRING_LITERAL:{
+        n = FraseFinalizada();
+        break;
+        }
+      default:
+        jj_la1[1] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
       }
-    case WHILE:{
-      n = Iteracao();
-      break;
-      }
-    case PRINT:
-    case INPUT:{
-      n = IO();
-      break;
-      }
-    case VOID:
-    case INT:
-    case FLOAT:
-    case STRING:{
-      n = Declaracao();
-      break;
-      }
-    case LPAREN:
-    case IDENTIFIER:
-    case NUMBER:
-    case STRING_LITERAL:{
-      n = FraseFinalizada();
-      break;
-      }
-    default:
-      jj_la1[1] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
 {if ("" != null) return n;}
+    } catch (ParseException e) {
+syncToStmt();
+        {if ("" != null) return new No("[ERRO]");}
+    }
     throw new Error("Missing return statement in function");
 }
 
   final public No IO() throws ParseException {No n = new No("IO"); No expr; Token t;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case PRINT:{
-      jj_consume_token(PRINT);
-      jj_consume_token(LPAREN);
-      expr = Expressao();
-      jj_consume_token(RPAREN);
-      jj_consume_token(SEMICOLON);
+    try {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case PRINT:{
+        jj_consume_token(PRINT);
+        jj_consume_token(LPAREN);
+        expr = Expressao();
+        jj_consume_token(RPAREN);
+        jj_consume_token(SEMICOLON);
 n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); {if ("" != null) return n;}
-      break;
+        break;
+        }
+      case INPUT:{
+        jj_consume_token(INPUT);
+        jj_consume_token(LPAREN);
+        t = jj_consume_token(IDENTIFIER);
+        jj_consume_token(RPAREN);
+        jj_consume_token(SEMICOLON);
+if (!tabelaSimbolos.contains(t.image)) {
+              {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");}
+          }
+          n.addFilho(new No("Comando", "vvod"));
+          n.addFilho(new No("Var", t.image));
+          {if ("" != null) return n;}
+        break;
+        }
+      default:
+        jj_la1[2] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
       }
-    case INPUT:{
-      jj_consume_token(INPUT);
-      jj_consume_token(LPAREN);
-      t = jj_consume_token(IDENTIFIER);
-      jj_consume_token(RPAREN);
-      jj_consume_token(SEMICOLON);
-// Verifica se variavel existe antes de ler
-      if (!tabelaSimbolos.contains(t.image)) {
-          {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");}
-      }
-      n.addFilho(new No("Comando", "vvod"));
-      n.addFilho(new No("Var", t.image));
-      {if ("" != null) return n;}
-      break;
-      }
-    default:
-      jj_la1[2] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+    } catch (ParseException e) {
+syncToStmt();
+        {if ("" != null) return new No("[ERRO]");}
     }
     throw new Error("Missing return statement in function");
 }
@@ -193,18 +211,23 @@ n = new No("Decremento"); n.addFilho(expr); {if ("" != null) return n;}
 }
 
   final public No Declaracao() throws ParseException {No n = new No("Declaracao"); No tipo; Token t; No inic = null;
-    tipo = TipoEspecificador();
-    t = jj_consume_token(IDENTIFIER);
+    try {
+      tipo = TipoEspecificador();
+      t = jj_consume_token(IDENTIFIER);
 // Verifica duplicidade
-       if (tabelaSimbolos.contains(t.image)) {
-           {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");}
-       }
-       tabelaSimbolos.add(t.image);
-    inic = OpcionalInicializacao();
-    jj_consume_token(SEMICOLON);
+           if (tabelaSimbolos.contains(t.image)) {
+               {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");}
+           }
+           tabelaSimbolos.add(t.image);
+      inic = OpcionalInicializacao();
+      jj_consume_token(SEMICOLON);
 n.addFilho(tipo); n.addFilho(new No("Var", t.image));
-        if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
-        {if ("" != null) return n;}
+            if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
+            {if ("" != null) return n;}
+    } catch (ParseException e) {
+syncToStmt();
+        {if ("" != null) return new No("[ERRO]");}
+    }
     throw new Error("Missing return statement in function");
 }
 
@@ -251,45 +274,14 @@ n.addFilho(tipo); n.addFilho(new No("Var", t.image));
 }
 
   final public No Condicional() throws ParseException {No n = new No("IF"); No cond; No cmd; No blocoIf = new No("Bloco True"); No blocoElse = null;
-    jj_consume_token(IF);
-    jj_consume_token(LPAREN);
-    cond = Expressao();
-    jj_consume_token(RPAREN);
-    jj_consume_token(LBRACE);
-n.addFilho(cond);
-    label_2:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case VOID:
-      case INT:
-      case FLOAT:
-      case STRING:
-      case IF:
-      case WHILE:
-      case PRINT:
-      case INPUT:
-      case LPAREN:
-      case IDENTIFIER:
-      case NUMBER:
-      case STRING_LITERAL:{
-        ;
-        break;
-        }
-      default:
-        jj_la1[7] = jj_gen;
-        break label_2;
-      }
-      cmd = Comando();
-blocoIf.addFilho(cmd);
-    }
-    jj_consume_token(RBRACE);
-n.addFilho(blocoIf);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case ELSE:{
-      jj_consume_token(ELSE);
+    try {
+      jj_consume_token(IF);
+      jj_consume_token(LPAREN);
+      cond = Expressao();
+      jj_consume_token(RPAREN);
       jj_consume_token(LBRACE);
-blocoElse = new No("Bloco Else");
-      label_3:
+n.addFilho(cond);
+      label_2:
       while (true) {
         switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
         case VOID:
@@ -308,58 +300,99 @@ blocoElse = new No("Bloco Else");
           break;
           }
         default:
-          jj_la1[8] = jj_gen;
-          break label_3;
+          jj_la1[7] = jj_gen;
+          break label_2;
         }
         cmd = Comando();
-blocoElse.addFilho(cmd);
+blocoIf.addFilho(cmd);
       }
       jj_consume_token(RBRACE);
+n.addFilho(blocoIf);
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case ELSE:{
+        jj_consume_token(ELSE);
+        jj_consume_token(LBRACE);
+blocoElse = new No("Bloco Else");
+        label_3:
+        while (true) {
+          switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+          case VOID:
+          case INT:
+          case FLOAT:
+          case STRING:
+          case IF:
+          case WHILE:
+          case PRINT:
+          case INPUT:
+          case LPAREN:
+          case IDENTIFIER:
+          case NUMBER:
+          case STRING_LITERAL:{
+            ;
+            break;
+            }
+          default:
+            jj_la1[8] = jj_gen;
+            break label_3;
+          }
+          cmd = Comando();
+blocoElse.addFilho(cmd);
+        }
+        jj_consume_token(RBRACE);
 n.addFilho(blocoElse);
-      break;
+        break;
+        }
+      default:
+        jj_la1[9] = jj_gen;
+        ;
       }
-    default:
-      jj_la1[9] = jj_gen;
-      ;
-    }
 {if ("" != null) return n;}
+    } catch (ParseException e) {
+syncToRbrace();
+        {if ("" != null) return new No("[ERRO]");}
+    }
     throw new Error("Missing return statement in function");
 }
 
   final public No Iteracao() throws ParseException {No n = new No("WHILE"); No cond; No cmd; No bloco = new No("Bloco Loop");
-    jj_consume_token(WHILE);
-    jj_consume_token(LPAREN);
-    cond = Expressao();
-    jj_consume_token(RPAREN);
-    jj_consume_token(LBRACE);
+    try {
+      jj_consume_token(WHILE);
+      jj_consume_token(LPAREN);
+      cond = Expressao();
+      jj_consume_token(RPAREN);
+      jj_consume_token(LBRACE);
 n.addFilho(cond);
-    label_4:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case VOID:
-      case INT:
-      case FLOAT:
-      case STRING:
-      case IF:
-      case WHILE:
-      case PRINT:
-      case INPUT:
-      case LPAREN:
-      case IDENTIFIER:
-      case NUMBER:
-      case STRING_LITERAL:{
-        ;
-        break;
+      label_4:
+      while (true) {
+        switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+        case VOID:
+        case INT:
+        case FLOAT:
+        case STRING:
+        case IF:
+        case WHILE:
+        case PRINT:
+        case INPUT:
+        case LPAREN:
+        case IDENTIFIER:
+        case NUMBER:
+        case STRING_LITERAL:{
+          ;
+          break;
+          }
+        default:
+          jj_la1[10] = jj_gen;
+          break label_4;
         }
-      default:
-        jj_la1[10] = jj_gen;
-        break label_4;
-      }
-      cmd = Comando();
+        cmd = Comando();
 bloco.addFilho(cmd);
-    }
-    jj_consume_token(RBRACE);
+      }
+      jj_consume_token(RBRACE);
 n.addFilho(bloco); {if ("" != null) return n;}
+    } catch (ParseException e) {
+syncToRbrace();
+        {if ("" != null) return new No("[ERRO]");}
+    }
     throw new Error("Missing return statement in function");
 }
 
