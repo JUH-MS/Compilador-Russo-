@@ -15,6 +15,7 @@ public class InterfaceCompilador extends JFrame {
     private JTextArea arvoreArea;
     private JTextArea tokensArea;
     private JTextArea lineNumbers;
+    private File arquivoAtual = null;
     
     private No raizArvore = null;
 
@@ -36,12 +37,16 @@ public class InterfaceCompilador extends JFrame {
         btnCompilar.setBackground(new Color(200, 255, 200));
         btnCompilar.addActionListener(e -> compilarCodigo());
         
+        JButton btnSalvar = new JButton("Salvar");
+        btnSalvar.addActionListener(e -> salvarArquivo());
+
         JButton btnGerarC = new JButton("Gerar C");
         btnGerarC.addActionListener(e -> gerarCodigoC());
 
         toolBar.add(btnAbrir);
         toolBar.addSeparator();
         toolBar.add(btnCompilar);
+        toolBar.add(btnSalvar);
         toolBar.add(btnGerarC);
         add(toolBar, BorderLayout.NORTH);
 
@@ -102,7 +107,8 @@ public class InterfaceCompilador extends JFrame {
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
-                editorArea.setText(Files.readString(fileChooser.getSelectedFile().toPath()));
+                arquivoAtual = fileChooser.getSelectedFile();
+                editorArea.setText(Files.readString(arquivoAtual.toPath()));
                 atualizarLinhas();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
@@ -114,6 +120,11 @@ public class InterfaceCompilador extends JFrame {
         String codigo = editorArea.getText();
         limparInterface();
         this.raizArvore = null;
+
+        if (codigo.isEmpty()) {
+        consoleArea.setText("<html><font color='orange'>Digite algum código antes de compilar.</font></html>");
+        return;
+        }
 
         PrintStream originalOut = System.out;
         ByteArrayOutputStream baosArvore = new ByteArrayOutputStream();
@@ -132,7 +143,7 @@ public class InterfaceCompilador extends JFrame {
             
             arvoreArea.setText(baosArvore.toString());
 
-            htmlFinal.append("<h2 style='color:green;'>✔ Compilado com Sucesso!</h2>");
+            htmlFinal.append("<h2 style='color:green;'>✔ Compilado com sucesso!</h2>");
             htmlFinal.append("<hr><b>Saida do Programa:</b><br><br>");
 
             // --- EXECUCAO ---
@@ -161,6 +172,36 @@ public class InterfaceCompilador extends JFrame {
             consoleArea.setText(htmlFinal.toString());
         }
     }
+
+    private void salvarArquivo() {
+        try {
+            // Se nunca foi salvo antes → salvar como
+            if (arquivoAtual == null) {
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Arquivos de Texto", "txt", "rus"));
+    
+                int result = fileChooser.showSaveDialog(this);
+                if (result != JFileChooser.APPROVE_OPTION) {
+                    return; // usuário cancelou
+                }
+    
+                arquivoAtual = fileChooser.getSelectedFile();
+    
+                // Garante extensão .rus
+                if (!arquivoAtual.getName().contains(".")) {
+                    arquivoAtual = new File(arquivoAtual.getAbsolutePath() + ".rus");
+                }
+            }
+    
+            // Salva conteúdo atual do editor
+            Files.writeString(arquivoAtual.toPath(), editorArea.getText());
+    
+            JOptionPane.showMessageDialog(this, "Arquivo salvo com sucesso:\n" + arquivoAtual.getName());
+    
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao salvar: " + e.getMessage());
+        }
+    }    
 
     private void listarTokens(String codigo) {
         StringBuilder sb = new StringBuilder();

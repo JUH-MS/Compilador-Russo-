@@ -43,6 +43,23 @@ void error_skipto(int kind) {
   do { t = getNextToken(); } while (t.kind != kind && t.kind != EOF);
 }
 
+// -----------------------------------------
+// MÉTODO DE SINCRONIZAÇÃO GLOBAL (PANIC MODE)
+// -----------------------------------------
+void error_skipto(int... tokens) {
+    try {
+        Token t = getToken(1);
+        while (true) {
+            for (int k : tokens) {
+                if (t.kind == k) return;
+            }
+            t = getNextToken();
+        }
+    } catch (Throwable e) {
+        return; // chegou ao EOF
+    }
+}
+
 // ==========================================
 // TOKENS (Palavras Reservadas em Russo)
 // ==========================================
@@ -107,40 +124,67 @@ TOKEN : {
 // GRAMÁTICA (LL1 + AST + Semântica)
 // ==========================================
 
-
-No Programa() : { No raiz = new No("PROGRAMA"); No filho; }
+No Programa() : { 
+    No raiz = new No("PROGRAMA"); 
+    No filho; 
+}
 {
     { tabelaSimbolos.clear(); }
-    ( 
-      filho = Comando() 
-      { if (filho != null) raiz.addFilho(filho); } 
-    )* <EOF>
-    { 
-        // --- CORREÇÃO: Manda imprimir a árvore para a interface capturar ---
-        raiz.imprimirRaiz(); 
-        return raiz; 
+
+    (
+        try {
+            filho = Comando()
+            { if (filho != null) raiz.addFilho(filho); }
+        } catch (ParseException e) {
+            error_skipto(SEMICOLON, RBRACE);
+            raiz.addFilho(new No("[ERRO]"));
+        }
+    )*
+    <EOF>
+    {
+        raiz.imprimirRaiz();
+        return raiz;
     }
 }
 
 No Comando() : { No n = null; }
 {
-    ( n = Condicional() | n = Iteracao() | n = IO() | n = Declaracao() | n = FraseFinalizada() )
-    { return n; }
+    try {
+        (
+            n = Condicional()
+          | n = Iteracao()
+          | n = IO()
+          | n = Declaracao()
+          | n = FraseFinalizada()
+        )
+        { return n; }
+    } catch (ParseException e) {
+        error_skipto(SEMICOLON, RBRACE);
+        return new No("[ERRO]");
+    }
 }
 
 No IO() : { No n = new No("IO"); No expr; Token t; }
 {
-    <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
-    { n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); return n; }
-    |
-    <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
-    { 
-      if (!tabelaSimbolos.contains(t.image)) {
-          throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");
-      }
-      n.addFilho(new No("Comando", "vvod")); 
-      n.addFilho(new No("Var", t.image)); 
-      return n; 
+    try {
+
+        <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
+        { n.addFilho(new No("Comando","vyvod")); n.addFilho(expr); return n; }
+
+      |
+        <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
+        {
+            if (!tabelaSimbolos.contains(t.image)) {
+                throw new ParseException("Variável '" + t.image + "' não declarada.");
+            }
+            n.addFilho(new No("Comando","vvod"));
+            n.addFilho(new No("Var", t.image));
+            return n;
+        }
+
+    } catch (ParseException e) {
+        error_skipto(SEMICOLON);
+        return new No("[ERRO]");
     }
 }
 
@@ -170,18 +214,27 @@ No Frase() : { No expr; No n = new No("Frase"); No atrib; }
 
 No Declaracao() : { No n = new No("Declaracao"); No tipo; Token t; No inic = null; }
 {
-    tipo = TipoEspecificador() t=<IDENTIFIER> 
-    {
-       if (tabelaSimbolos.contains(t.image)) {
-           throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");
-       }
-       tabelaSimbolos.add(t.image);
-    }
-    inic = OpcionalInicializacao() <SEMICOLON>
-    {
-        n.addFilho(tipo); n.addFilho(new No("Var", t.image));
-        if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
-        return n;
+    try {
+        tipo = TipoEspecificador() t=<IDENTIFIER>
+        {
+            if (tabelaSimbolos.contains(t.image)) {
+                throw new ParseException("Variável '" + t.image + "' já existe.");
+            }
+            tabelaSimbolos.add(t.image);
+        }
+
+        inic = OpcionalInicializacao()
+        <SEMICOLON>
+        {
+            n.addFilho(tipo);
+            n.addFilho(new No("Var", t.image));
+            if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
+            return n;
+        }
+
+    } catch (ParseException e) {
+        error_skipto(SEMICOLON);
+        return new No("[ERRO]");
     }
 }
 
@@ -196,25 +249,80 @@ No TipoEspecificador() : { Token t; }
     { return new No("Tipo", t.image); }
 }
 
-No Condicional() : { No n = new No("IF"); No cond; No cmd; No blocoIf = new No("Bloco True"); No blocoElse = null; }
+No Condicional() :
+{ 
+    No n = new No("IF"); 
+    No cond; 
+    No cmd; 
+    No blocoIf = new No("Bloco True"); 
+    No blocoElse = null; 
+}
 {
-    <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE> 
-    { n.addFilho(cond); }
-    ( cmd=Comando() { blocoIf.addFilho(cmd); } )* <RBRACE>
-    { n.addFilho(blocoIf); }
-    [ <ELSE> <LBRACE> { blocoElse = new No("Bloco Else"); }
-      ( cmd=Comando() { blocoElse.addFilho(cmd); } )* <RBRACE> 
-      { n.addFilho(blocoElse); }
-    ]
-    { return n; }
+    try {
+        <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
+        { n.addFilho(cond); }
+
+        (
+            try {
+                cmd = Comando() { blocoIf.addFilho(cmd); }
+            } catch (ParseException e) {
+                error_skipto(RBRACE);
+                blocoIf.addFilho(new No("[ERRO]"));
+            }
+        )*
+
+        <RBRACE>
+        { n.addFilho(blocoIf); }
+
+        [
+            <ELSE> <LBRACE> { blocoElse = new No("Bloco Else"); }
+            (
+                try {
+                    cmd = Comando() { blocoElse.addFilho(cmd); }
+                } catch (ParseException e) {
+                    error_skipto(RBRACE);
+                    blocoElse.addFilho(new No("[ERRO]"));
+                }
+            )*
+            <RBRACE> { n.addFilho(blocoElse); }
+        ]
+
+        { return n; }
+
+    } catch (ParseException e) {
+        error_skipto(RBRACE, SEMICOLON);
+        return new No("[ERRO]");
+    }
 }
 
-No Iteracao() : { No n = new No("WHILE"); No cond; No cmd; No bloco = new No("Bloco Loop"); }
+No Iteracao() :
+{ 
+    No n = new No("WHILE"); 
+    No cond; 
+    No cmd; 
+    No bloco = new No("Bloco Loop"); 
+}
 {
-    <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
-    { n.addFilho(cond); }
-    ( cmd=Comando() { bloco.addFilho(cmd); } )* <RBRACE>
-    { n.addFilho(bloco); return n; }
+    try {
+        <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
+        { n.addFilho(cond); }
+
+        (
+            try {
+                cmd = Comando() { bloco.addFilho(cmd); }
+            } catch (ParseException e) {
+                error_skipto(RBRACE);
+                bloco.addFilho(new No("[ERRO]"));
+            }
+        )*
+
+        <RBRACE>
+        { n.addFilho(bloco); return n; }
+
+    } catch (ParseException e) {
+        error_skipto(RBRACE, SEMICOLON);
+        return new No("[ERRO]");
+    }
 }
 
 No Expressao() : { No n; } { n = ExpressaoRelacional() { return n; } }
@@ -245,14 +353,24 @@ No ExpressaoMultiplicativa() : { No atual, prox; Token op; }
 
 No Termo() : { Token t; No n; }
 {
-    t=<IDENTIFIER> 
-    { 
-      if (!tabelaSimbolos.contains(t.image)) {
-          throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");
-      }
-      return new No("Var", t.image); 
+    try {
+
+        t=<IDENTIFIER>
+        {
+            if (!tabelaSimbolos.contains(t.image)) {
+                throw new ParseException("Variável '" + t.image + "' não declarada.");
+            }
+            return new No("Var", t.image);
+        }
+    |
+        t=<NUMBER> { return new No("Num", t.image); }
+    |
+        t=<STRING_LITERAL> { return new No("String", t.image); }
+    |
+        <LPAREN> n=Expressao() <RPAREN> { return n; }
+
+    } catch (ParseException e) {
+        error_skipto(RPAREN, SEMICOLON);
+        return new No("[ERRO]");
     }
-  | t=<NUMBER> { return new No("Num", t.image); }
-  | t=<STRING_LITERAL> { return new No("String", t.image); }
-  | <LPAREN> n=Expressao() <RPAREN> { return n; }
 }

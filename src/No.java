@@ -8,6 +8,8 @@ public class No {
     private String valor;
     private List<No> filhos;
 
+    private static java.util.Map<String,String> tipoVars = new java.util.HashMap<>();
+
     public No(String nome) { this.nome = nome; this.valor = ""; this.filhos = new ArrayList<>(); }
     public No(String nome, String valor) { this.nome = nome; this.valor = valor; this.filhos = new ArrayList<>(); }
     public void addFilho(No filho) { if (filho != null) filhos.add(filho); }
@@ -127,43 +129,154 @@ public class No {
         return null;
     }
 
-    // --- GERADOR C ---
-    public String gerarC() {
-        StringBuilder sb = new StringBuilder();
-        if (nome.startsWith("[ERRO")) return ""; 
-        
-        if (nome.equals("PROGRAMA")) {
-            sb.append("#include <stdio.h>\nint main() {\n");
-            for (No f : filhos) sb.append(f.gerarC());
-            sb.append("return 0;\n}\n");
-        } else if (nome.equals("IO")) {
-            if (filhos.isEmpty()) return "";
-            if (filhos.get(0).valor.equals("vyvod")) {
-                if (filhos.get(1).nome.equals("String")) sb.append("printf(" + filhos.get(1).valor + "); printf(\"\\n\");\n");
-                else sb.append("printf(\"%g\\n\", (float)" + filhos.get(1).gerarC() + ");\n");
-            } else sb.append("scanf(\"%f\", &" + filhos.get(1).valor + ");\n");
-        } else if (nome.equals("Declaracao")) {
-            sb.append("float " + filhos.get(1).valor);
-            if (filhos.size() > 3) sb.append(" = " + filhos.get(3).gerarC());
-            sb.append(";\n");
-        } else if (nome.equals("Atribuicao")) {
-            sb.append(filhos.get(0).gerarC() + " = " + filhos.get(2).gerarC() + ";\n");
-        } else if (nome.equals("Incremento")) {
-            sb.append(filhos.get(0).gerarC() + "++;\n");
-        } else if (nome.equals("Decremento")) {
-            sb.append(filhos.get(0).gerarC() + "--;\n");
-        } else if (nome.equals("IF")) {
-            sb.append("if (" + filhos.get(0).gerarC() + ") {\n" + filhos.get(1).gerarC() + "}\n");
-            if (filhos.size() > 2) sb.append("else {\n" + filhos.get(2).gerarC() + "}\n");
-        } else if (nome.equals("WHILE")) {
-            sb.append("while (" + filhos.get(0).gerarC() + ") {\n" + filhos.get(1).gerarC() + "}\n");
-        } else if (nome.equals("Num") || nome.equals("Var") || nome.equals("String")) {
-            sb.append(valor);
-        } else if (nome.startsWith("Op.")) {
-            sb.append(filhos.get(0).gerarC() + " " + valor + " " + filhos.get(1).gerarC());
-        } else {
-            for (No f : filhos) sb.append(f.gerarC());
-        }
+    private String traduzTipo(String russo) {
+        return switch (russo) {
+            case "pusto"   -> "void";
+            case "tseloye" -> "int";
+            case "drobnoye"-> "float";
+            case "slova"   -> "char*";
+            default        -> "float";
+        };
+    }
+
+// --- GERADOR C ---
+public String gerarC() {
+    StringBuilder sb = new StringBuilder();
+    if (nome.startsWith("[ERRO")) return "";
+
+    if (nome.startsWith("PROGRAMA")) {
+
+        sb.append("#include <stdio.h>\n");
+        sb.append("#include <stdlib.h>\n\n");
+
+        sb.append("int main() {\n");
+
+        for (No f : filhos)
+            sb.append(f.gerarC());
+
+        sb.append("    return 0;\n");
+        sb.append("}\n");
+
         return sb.toString();
     }
+
+    // -------------------------
+    // OUTROS NÓS (switch)
+    // -------------------------
+    switch (nome) {
+
+        // ENTRADA E SAÍDA
+        case "IO":
+            if (filhos.get(0).valor.equals("vyvod")) {   // PRINT
+                No expr = filhos.get(1);
+
+                if (expr.nome.equals("String")) {
+                    sb.append("    printf(").append(expr.valor).append(");\n");
+                } 
+                else if (expr.nome.equals("Var")) {
+                    String varName = expr.valor;
+                    String t = tipoVars.get(varName);
+
+                    if ("int".equals(t)) {
+                        sb.append("    printf(\"%d\", ").append(varName).append(");\n");
+                    } else if ("char*".equals(t)) {
+                        sb.append("    printf(\"%s\", ").append(varName).append(");\n");
+                    } else {
+                        sb.append("    printf(\"%g\", (float)(").append(varName).append("));\n");
+                    }
+                } 
+                else {
+                    sb.append("    printf(\"%g\", (float)(")
+                      .append(expr.gerarC())
+                      .append("));\n");
+                }
+
+            } else { // INPUT (vvod)
+                sb.append("    scanf(\"%f\", &").append(filhos.get(1).valor).append(");\n");
+            }
+            break;
+
+
+        // DECLARACÃO
+        case "Declaracao":
+            String tipoC = traduzTipo(filhos.get(0).valor);
+            String nomeVar = filhos.get(1).valor;
+
+            tipoVars.put(nomeVar, tipoC); // registra tipo
+
+            sb.append("    ").append(tipoC).append(" ").append(nomeVar);
+
+            if (filhos.size() > 3) {
+                sb.append(" = ").append(filhos.get(3).gerarC());
+            }
+
+            sb.append(";\n");
+            break;
+
+        case "Atribuicao":
+            sb.append("    ")
+              .append(filhos.get(0).gerarC())
+              .append(" = ")
+              .append(filhos.get(2).gerarC())
+              .append(";\n");
+            break;
+
+        case "Incremento":
+            sb.append("    ").append(filhos.get(0).gerarC()).append("++;\n");
+            break;
+
+        case "Decremento":
+            sb.append("    ").append(filhos.get(0).gerarC()).append("--;\n");
+            break;
+
+        case "IF":
+            sb.append("    if (")
+              .append(filhos.get(0).gerarC()).append(") {\n")
+              .append(filhos.get(1).gerarC())
+              .append("    }\n");
+            if (filhos.size() > 2) {
+                sb.append("    else {\n")
+                  .append(filhos.get(2).gerarC())
+                  .append("    }\n");
+            }
+            break;
+
+        case "WHILE":
+            sb.append("    while (")
+              .append(filhos.get(0).gerarC()).append(") {\n")
+              .append(filhos.get(1).gerarC())
+              .append("    }\n");
+            break;
+
+
+        // EXPRESSÕES
+        case "Num": return valor;
+        case "Var": return valor;
+        case "String": return valor;
+
+        // OPERADORES BINÁRIOS
+        case "Op.+":
+        case "Op.-":
+        case "Op.*":
+        case "Op./":
+        case "Op.%":
+        case "Op.>":
+        case "Op.<":
+        case "Op.>=":
+        case "Op.<=":
+        case "Op.==":
+        case "Op.!=":
+        case "Op.//":
+            return "(" + filhos.get(0).gerarC() + " " + valor + " " + filhos.get(1).gerarC() + ")";
+
+        case "Op.**":
+            return "pow(" + filhos.get(0).gerarC() + ", " + filhos.get(1).gerarC() + ")";
+
+        default:
+            for (No f : filhos)
+                sb.append(f.gerarC());
+    }
+
+    return sb.toString();
+}
 }
