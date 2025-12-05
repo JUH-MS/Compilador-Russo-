@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class RusskiyCompiler {
-    // TABELA DE SÍMBOLOS: Guarda os nomes das variáveis declaradas
+    // Tabela de Símbolos para verificação semântica
     private Set<String> tabelaSimbolos = new HashSet<String>();
 
     public static void main(String args[]) throws ParseException {
@@ -33,7 +33,7 @@ public class RusskiyCompiler {
 PARSER_END(RusskiyCompiler)
 
 // ==========================================
-// CÓDIGO DE RECUPERAÇÃO DE ERRO (JAVACODE)
+// CÓDIGO DE RECUPERAÇÃO (JAVACODE)
 // ==========================================
 JAVACODE
 void error_skipto(int kind) {
@@ -43,148 +43,118 @@ void error_skipto(int kind) {
   do { t = getNextToken(); } while (t.kind != kind && t.kind != EOF);
 }
 
-// -----------------------------------------
-// MÉTODO DE SINCRONIZAÇÃO GLOBAL (PANIC MODE)
-// -----------------------------------------
-void error_skipto(int... tokens) {
-    try {
-        Token t = getToken(1);
-        while (true) {
-            for (int k : tokens) {
-                if (t.kind == k) return;
-            }
-            t = getNextToken();
-        }
-    } catch (Throwable e) {
-        return; // chegou ao EOF
-    }
+// ==========================================
+// TOKENS E IGNORADOS
+// ==========================================
+
+SKIP : {
+    " " | "\t" | "\n" | "\r" | "\u00a0"
 }
 
-// ==========================================
-// TOKENS (Palavras Reservadas em Russo)
-// ==========================================
+// --- Comentários ---
+MORE : {
+    "#" : IN_SINGLE_LINE_COMMENT
+}
+<IN_SINGLE_LINE_COMMENT> SKIP : {
+    < ~["\n","\r"] >
+}
+<IN_SINGLE_LINE_COMMENT> SKIP : {
+    < ("\n"|"\r"|"\r\n") > : DEFAULT
+}
 
-SKIP : { " " | "\t" | "\n" | "\r" | "\u00a0" }
-
-
-MORE : { "ili" : IN_SINGLE_LINE_COMMENT }
-<IN_SINGLE_LINE_COMMENT> SKIP : { < ~["\n","\r"] > }
-<IN_SINGLE_LINE_COMMENT> SKIP : { < ("\n"|"\r"|"\r\n") > : DEFAULT }
-
+// =============================
+// Tokens (Organização Original)
+// =============================
 TOKEN : {
-    < VOID      : "pusto"                                                      > 
-  | < INT       : "tseloye"                                                    > 
-  | < FLOAT     : "drobnoye"                                                   > 
-  | < STRING    : "slova"                                                      >
+  // --- Palavras-Chave ---
+    < VOID      : "pusto"                > 
+  | < INT       : "tseloye"              > 
+  | < FLOAT     : "drobnoye"             > 
+  | < STRING    : "slova"                > 
+  | < IF        : "yesli"                > 
+  | < ELSE      : "inache"               > 
+  | < FOR       : "kazhday"              > 
+  | < WHILE     : "poka"                 > 
+  | < PRINT     : "vyvod"                > 
+  | < INPUT     : "vvod"                 > 
 
-    // Estruturas de Controle
-  | < IF        : "yesli"                                                      > 
-  | < ELSE      : "inache"                                                     > 
-  | < FOR       : "kazhday"                                                    > 
-  | < WHILE     : "poka"                                                       >
+  // --- Operadores Compostos ---
+  | < EQ        : "=="                   > 
+  | < NEQ       : "!="                   > 
+  | < LE        : "<="                   > 
+  | < GE        : ">="                   > 
+  | < INC       : "++"                   > 
+  | < DEC       : "--"                   > 
+  | < POW       : "**"                   > 
+  | < DIVINT    : "//"                   > 
 
-    // Entrada e Saída
-  | < PRINT     : "vyvod"                                                      > 
-  | < INPUT     : "vvod"                                                       >
+  // --- Operadores Simples ---
+  | < ASSIGN    : "="                    > 
+  | < GT        : ">"                    > 
+  | < LT        : "<"                    > 
+  | < PLUS      : "+"                    > 
+  | < MINUS     : "-"                    > 
+  | < MULT      : "*"                    > 
+  | < DIV       : "/"                    > 
+  | < MOD       : "%"                    >
+  | < E         : "/i"                   >
+  | < OU        : "ili"                  >
+  | < TRUE      : "pravda"               >
+  | < FALSE     : "nepravda"             >
 
-    // Operadores
-  | < EQ        : "=="                                                         > 
-  | < NEQ       : "!="                                                         > 
-  | < LE        : "<="                                                         > 
-  | < GE        : ">="                                                         >
-  | < INC       : "++"                                                         > 
-  | < DEC       : "--"                                                         > 
-  | < POW       : "**"                                                         > 
-  | < DIVINT    : "//"                                                         >
-  | < ASSIGN    : "="                                                          > 
-  | < GT        : ">"                                                          > 
-  | < LT        : "<"                                                          >
-  | < PLUS      : "+"                                                          > 
-  | < MINUS     : "-"                                                          > 
-  | < MULT      : "*"                                                          > 
-  | < DIV       : "/"                                                          > 
-  | < MOD       : "%"                                                          >
 
-    // Pontuação
-  | < LPAREN    : "("                                                          > 
-  | < RPAREN    : ")"                                                          > 
-  | < LBRACE    : "{"                                                          > 
-  | < RBRACE    : "}"                                                          >
-  | < SEMICOLON : ";"                                                          > 
-  | < COMMA     : ","                                                          > 
-  | < DOT       : "."                                                          >
+  // --- Pontuação ---
+  | < LPAREN    : "("                    > 
+  | < RPAREN    : ")"                    > 
+  | < LBRACE    : "{"                    > 
+  | < RBRACE    : "}"                    > 
+  | < SEMICOLON : ";"                    > 
+  | < COMMA     : ","                    > 
+  | < DOT       : "."                    > 
 
-    // Literais (Números e Identificadores)
-  | < NUMBER: (["0"-"9"])+ ( "." (["0"-"9"])+ )?                               >
-  | < STRING_LITERAL: "\"" (~["\"","\n","\r"])* "\""                           >
-  | < IDENTIFIER: ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )*     >
+  // --- Literais ---
+  | < IDENTIFIER : ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+  | < NUMBER     : (["0"-"9"])+ ( "." (["0"-"9"])+ )? >
+  | < STRING_LITERAL : "\"" (~["\"","\n","\r"])* "\"" >
 }
 
 // ==========================================
-// GRAMÁTICA (LL1 + AST + Semântica)
+// GRAMÁTICA (LL1 + AST + Semântica + Pânico)
 // ==========================================
 
-No Programa() : { 
-    No raiz = new No("PROGRAMA"); 
-    No filho; 
-}
+No Programa() : { No raiz = new No("PROGRAMA"); No filho; }
 {
     { tabelaSimbolos.clear(); }
-
-    (
-        try {
-            filho = Comando()
-            { if (filho != null) raiz.addFilho(filho); }
-        } catch (ParseException e) {
-            error_skipto(SEMICOLON, RBRACE);
-            raiz.addFilho(new No("[ERRO]"));
-        }
-    )*
-    <EOF>
-    {
-        raiz.imprimirRaiz();
-        return raiz;
+    ( 
+      filho = Comando() 
+      { if (filho != null) raiz.addFilho(filho); } 
+    )* <EOF>
+    { 
+        raiz.imprimirRaiz(); 
+        return raiz; 
     }
 }
 
 No Comando() : { No n = null; }
 {
-    try {
-        (
-            n = Condicional()
-          | n = Iteracao()
-          | n = IO()
-          | n = Declaracao()
-          | n = FraseFinalizada()
-        )
-        { return n; }
-    } catch (ParseException e) {
-        error_skipto(SEMICOLON, RBRACE);
-        return new No("[ERRO]");
-    }
+    ( n = Condicional() | n = Iteracao() | n = IO() | n = Declaracao() | n = FraseFinalizada() )
+    { return n; }
 }
 
 No IO() : { No n = new No("IO"); No expr; Token t; }
 {
-    try {
-
-        <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
-        { n.addFilho(new No("Comando","vyvod")); n.addFilho(expr); return n; }
-
-      |
-        <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
-        {
-            if (!tabelaSimbolos.contains(t.image)) {
-                throw new ParseException("Variável '" + t.image + "' não declarada.");
-            }
-            n.addFilho(new No("Comando","vvod"));
-            n.addFilho(new No("Var", t.image));
-            return n;
-        }
-
-    } catch (ParseException e) {
-        error_skipto(SEMICOLON);
-        return new No("[ERRO]");
+    <PRINT> <LPAREN> expr = Expressao() <RPAREN> <SEMICOLON>
+    { n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); return n; }
+    |
+    <INPUT> <LPAREN> t=<IDENTIFIER> <RPAREN> <SEMICOLON>
+    { 
+      // Verifica se variavel existe antes de ler
+      if (!tabelaSimbolos.contains(t.image)) {
+          throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");
+      }
+      n.addFilho(new No("Comando", "vvod")); 
+      n.addFilho(new No("Var", t.image)); 
+      return n; 
     }
 }
 
@@ -214,27 +184,19 @@ No Frase() : { No expr; No n = new No("Frase"); No atrib; }
 
 No Declaracao() : { No n = new No("Declaracao"); No tipo; Token t; No inic = null; }
 {
-    try {
-        tipo = TipoEspecificador() t=<IDENTIFIER>
-        {
-            if (tabelaSimbolos.contains(t.image)) {
-                throw new ParseException("Variável '" + t.image + "' já existe.");
-            }
-            tabelaSimbolos.add(t.image);
-        }
-
-        inic = OpcionalInicializacao()
-        <SEMICOLON>
-        {
-            n.addFilho(tipo);
-            n.addFilho(new No("Var", t.image));
-            if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
-            return n;
-        }
-
-    } catch (ParseException e) {
-        error_skipto(SEMICOLON);
-        return new No("[ERRO]");
+    tipo = TipoEspecificador() t=<IDENTIFIER> 
+    {
+       // Verifica duplicidade
+       if (tabelaSimbolos.contains(t.image)) {
+           throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");
+       }
+       tabelaSimbolos.add(t.image);
+    }
+    inic = OpcionalInicializacao() <SEMICOLON>
+    {
+        n.addFilho(tipo); n.addFilho(new No("Var", t.image));
+        if (inic != null) { n.addFilho(new No("Inicializacao")); n.addFilho(inic); }
+        return n;
     }
 }
 
@@ -249,80 +211,25 @@ No TipoEspecificador() : { Token t; }
     { return new No("Tipo", t.image); }
 }
 
-No Condicional() :
-{ 
-    No n = new No("IF"); 
-    No cond; 
-    No cmd; 
-    No blocoIf = new No("Bloco True"); 
-    No blocoElse = null; 
-}
+No Condicional() : { No n = new No("IF"); No cond; No cmd; No blocoIf = new No("Bloco True"); No blocoElse = null; }
 {
-    try {
-        <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
-        { n.addFilho(cond); }
-
-        (
-            try {
-                cmd = Comando() { blocoIf.addFilho(cmd); }
-            } catch (ParseException e) {
-                error_skipto(RBRACE);
-                blocoIf.addFilho(new No("[ERRO]"));
-            }
-        )*
-
-        <RBRACE>
-        { n.addFilho(blocoIf); }
-
-        [
-            <ELSE> <LBRACE> { blocoElse = new No("Bloco Else"); }
-            (
-                try {
-                    cmd = Comando() { blocoElse.addFilho(cmd); }
-                } catch (ParseException e) {
-                    error_skipto(RBRACE);
-                    blocoElse.addFilho(new No("[ERRO]"));
-                }
-            )*
-            <RBRACE> { n.addFilho(blocoElse); }
-        ]
-
-        { return n; }
-
-    } catch (ParseException e) {
-        error_skipto(RBRACE, SEMICOLON);
-        return new No("[ERRO]");
-    }
+    <IF> <LPAREN> cond=Expressao() <RPAREN> <LBRACE> 
+    { n.addFilho(cond); }
+    ( cmd=Comando() { blocoIf.addFilho(cmd); } )* <RBRACE>
+    { n.addFilho(blocoIf); }
+    [ <ELSE> <LBRACE> { blocoElse = new No("Bloco Else"); }
+      ( cmd=Comando() { blocoElse.addFilho(cmd); } )* <RBRACE> 
+      { n.addFilho(blocoElse); }
+    ]
+    { return n; }
 }
 
-No Iteracao() :
-{ 
-    No n = new No("WHILE"); 
-    No cond; 
-    No cmd; 
-    No bloco = new No("Bloco Loop"); 
-}
+No Iteracao() : { No n = new No("WHILE"); No cond; No cmd; No bloco = new No("Bloco Loop"); }
 {
-    try {
-        <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
-        { n.addFilho(cond); }
-
-        (
-            try {
-                cmd = Comando() { bloco.addFilho(cmd); }
-            } catch (ParseException e) {
-                error_skipto(RBRACE);
-                bloco.addFilho(new No("[ERRO]"));
-            }
-        )*
-
-        <RBRACE>
-        { n.addFilho(bloco); return n; }
-
-    } catch (ParseException e) {
-        error_skipto(RBRACE, SEMICOLON);
-        return new No("[ERRO]");
-    }
+    <WHILE> <LPAREN> cond=Expressao() <RPAREN> <LBRACE>
+    { n.addFilho(cond); }
+    ( cmd=Comando() { bloco.addFilho(cmd); } )* <RBRACE>
+    { n.addFilho(bloco); return n; }
 }
 
 No Expressao() : { No n; } { n = ExpressaoRelacional() { return n; } }
@@ -353,24 +260,15 @@ No ExpressaoMultiplicativa() : { No atual, prox; Token op; }
 
 No Termo() : { Token t; No n; }
 {
-    try {
-
-        t=<IDENTIFIER>
-        {
-            if (!tabelaSimbolos.contains(t.image)) {
-                throw new ParseException("Variável '" + t.image + "' não declarada.");
-            }
-            return new No("Var", t.image);
-        }
-    |
-        t=<NUMBER> { return new No("Num", t.image); }
-    |
-        t=<STRING_LITERAL> { return new No("String", t.image); }
-    |
-        <LPAREN> n=Expressao() <RPAREN> { return n; }
-
-    } catch (ParseException e) {
-        error_skipto(RPAREN, SEMICOLON);
-        return new No("[ERRO]");
+    t=<IDENTIFIER> 
+    { 
+      // Verifica existencia da variavel
+      if (!tabelaSimbolos.contains(t.image)) {
+          throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");
+      }
+      return new No("Var", t.image); 
     }
+  | t=<NUMBER> { return new No("Num", t.image); }
+  | t=<STRING_LITERAL> { return new No("String", t.image); }
+  | <LPAREN> n=Expressao() <RPAREN> { return n; }
 }

@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class RusskiyCompiler implements RusskiyCompilerConstants {
-    // TABELA DE SÍMBOLOS: Guarda os nomes das variáveis declaradas
+    // Tabela de Símbolos para verificação semântica
     private Set<String> tabelaSimbolos = new HashSet<String>();
 
     public static void main(String args[]) throws ParseException {
@@ -34,10 +34,9 @@ public class RusskiyCompiler implements RusskiyCompilerConstants {
   }
 
 // ==========================================
-// GRAMÁTICA (LL1 + AST + Semântica)
+// GRAMÁTICA (LL1 + AST + Semântica + Pânico)
 // ==========================================
   final public 
-
 No Programa() throws ParseException {No raiz = new No("PROGRAMA"); No filho;
 tabelaSimbolos.clear();
     label_1:
@@ -52,9 +51,9 @@ tabelaSimbolos.clear();
       case PRINT:
       case INPUT:
       case LPAREN:
+      case IDENTIFIER:
       case NUMBER:
-      case STRING_LITERAL:
-      case IDENTIFIER:{
+      case STRING_LITERAL:{
         ;
         break;
         }
@@ -66,8 +65,7 @@ tabelaSimbolos.clear();
 if (filho != null) raiz.addFilho(filho);
     }
     jj_consume_token(0);
-// --- CORREÇÃO: Manda imprimir a árvore para a interface capturar ---
-        raiz.imprimirRaiz();
+raiz.imprimirRaiz();
         {if ("" != null) return raiz;}
     throw new Error("Missing return statement in function");
 }
@@ -95,9 +93,9 @@ if (filho != null) raiz.addFilho(filho);
       break;
       }
     case LPAREN:
+    case IDENTIFIER:
     case NUMBER:
-    case STRING_LITERAL:
-    case IDENTIFIER:{
+    case STRING_LITERAL:{
       n = FraseFinalizada();
       break;
       }
@@ -127,7 +125,8 @@ n.addFilho(new No("Comando", "vyvod")); n.addFilho(expr); {if ("" != null) retur
       t = jj_consume_token(IDENTIFIER);
       jj_consume_token(RPAREN);
       jj_consume_token(SEMICOLON);
-if (!tabelaSimbolos.contains(t.image)) {
+// Verifica se variavel existe antes de ler
+      if (!tabelaSimbolos.contains(t.image)) {
           {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");}
       }
       n.addFilho(new No("Comando", "vvod"));
@@ -196,7 +195,8 @@ n = new No("Decremento"); n.addFilho(expr); {if ("" != null) return n;}
   final public No Declaracao() throws ParseException {No n = new No("Declaracao"); No tipo; Token t; No inic = null;
     tipo = TipoEspecificador();
     t = jj_consume_token(IDENTIFIER);
-if (tabelaSimbolos.contains(t.image)) {
+// Verifica duplicidade
+       if (tabelaSimbolos.contains(t.image)) {
            {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' ja existe.");}
        }
        tabelaSimbolos.add(t.image);
@@ -269,9 +269,9 @@ n.addFilho(cond);
       case PRINT:
       case INPUT:
       case LPAREN:
+      case IDENTIFIER:
       case NUMBER:
-      case STRING_LITERAL:
-      case IDENTIFIER:{
+      case STRING_LITERAL:{
         ;
         break;
         }
@@ -301,9 +301,9 @@ blocoElse = new No("Bloco Else");
         case PRINT:
         case INPUT:
         case LPAREN:
+        case IDENTIFIER:
         case NUMBER:
-        case STRING_LITERAL:
-        case IDENTIFIER:{
+        case STRING_LITERAL:{
           ;
           break;
           }
@@ -345,9 +345,9 @@ n.addFilho(cond);
       case PRINT:
       case INPUT:
       case LPAREN:
+      case IDENTIFIER:
       case NUMBER:
-      case STRING_LITERAL:
-      case IDENTIFIER:{
+      case STRING_LITERAL:{
         ;
         break;
         }
@@ -513,7 +513,8 @@ No novoPai = new No("Op.Multiplicativo", op.image); novoPai.addFilho(atual); nov
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case IDENTIFIER:{
       t = jj_consume_token(IDENTIFIER);
-if (!tabelaSimbolos.contains(t.image)) {
+// Verifica existencia da variavel
+      if (!tabelaSimbolos.contains(t.image)) {
           {if (true) throw new ParseException("Erro Semantico na linha " + t.beginLine + ": Variavel '" + t.image + "' nao declarada.");}
       }
       {if ("" != null) return new No("Var", t.image);}
@@ -564,7 +565,7 @@ if (!tabelaSimbolos.contains(t.image)) {
 	   jj_la1_0 = new int[] {0x73e00,0x73e00,0x60000,0x9800000,0x9800000,0x8000000,0x1e00,0x73e00,0x73e00,0x4000,0x73e00,0x30780000,0x30780000,0xc0000000,0xc0000000,0x6000000,0x6000000,0x0,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0x1c08,0x1c08,0x0,0x0,0x0,0x0,0x0,0x1c08,0x1c08,0x0,0x1c08,0x0,0x0,0x0,0x0,0x7,0x7,0x1c08,};
+	   jj_la1_1 = new int[] {0x1c080,0x1c080,0x0,0x0,0x0,0x0,0x0,0x1c080,0x1c080,0x0,0x1c080,0x0,0x0,0x0,0x0,0x7,0x7,0x1c080,};
 	}
 
   /** Constructor with InputStream. */
@@ -689,7 +690,7 @@ if (!tabelaSimbolos.contains(t.image)) {
   /** Generate ParseException. */
   public ParseException generateParseException() {
 	 jj_expentries.clear();
-	 boolean[] la1tokens = new boolean[45];
+	 boolean[] la1tokens = new boolean[49];
 	 if (jj_kind >= 0) {
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
@@ -706,7 +707,7 @@ if (!tabelaSimbolos.contains(t.image)) {
 		 }
 	   }
 	 }
-	 for (int i = 0; i < 45; i++) {
+	 for (int i = 0; i < 49; i++) {
 	   if (la1tokens[i]) {
 		 jj_expentry = new int[1];
 		 jj_expentry[0] = i;

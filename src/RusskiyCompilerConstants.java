@@ -61,25 +61,33 @@ public interface RusskiyCompilerConstants {
   /** RegularExpression Id. */
   int MOD = 34;
   /** RegularExpression Id. */
-  int LPAREN = 35;
+  int E = 35;
   /** RegularExpression Id. */
-  int RPAREN = 36;
+  int OU = 36;
   /** RegularExpression Id. */
-  int LBRACE = 37;
+  int TRUE = 37;
   /** RegularExpression Id. */
-  int RBRACE = 38;
+  int FALSE = 38;
   /** RegularExpression Id. */
-  int SEMICOLON = 39;
+  int LPAREN = 39;
   /** RegularExpression Id. */
-  int COMMA = 40;
+  int RPAREN = 40;
   /** RegularExpression Id. */
-  int DOT = 41;
+  int LBRACE = 41;
   /** RegularExpression Id. */
-  int NUMBER = 42;
+  int RBRACE = 42;
   /** RegularExpression Id. */
-  int STRING_LITERAL = 43;
+  int SEMICOLON = 43;
   /** RegularExpression Id. */
-  int IDENTIFIER = 44;
+  int COMMA = 44;
+  /** RegularExpression Id. */
+  int DOT = 45;
+  /** RegularExpression Id. */
+  int IDENTIFIER = 46;
+  /** RegularExpression Id. */
+  int NUMBER = 47;
+  /** RegularExpression Id. */
+  int STRING_LITERAL = 48;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -94,7 +102,7 @@ public interface RusskiyCompilerConstants {
     "\"\\n\"",
     "\"\\r\"",
     "\"\\u00a0\"",
-    "\"ili\"",
+    "\"#\"",
     "<token of kind 7>",
     "<token of kind 8>",
     "\"pusto\"",
@@ -123,6 +131,10 @@ public interface RusskiyCompilerConstants {
     "\"*\"",
     "\"/\"",
     "\"%\"",
+    "\"/i\"",
+    "\"ili\"",
+    "\"pravda\"",
+    "\"nepravda\"",
     "\"(\"",
     "\")\"",
     "\"{\"",
@@ -130,9 +142,9 @@ public interface RusskiyCompilerConstants {
     "\";\"",
     "\",\"",
     "\".\"",
+    "<IDENTIFIER>",
     "<NUMBER>",
     "<STRING_LITERAL>",
-    "<IDENTIFIER>",
   };
 
 }

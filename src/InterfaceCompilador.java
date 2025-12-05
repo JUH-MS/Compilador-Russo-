@@ -5,19 +5,25 @@ import java.util.HashMap;
 import java.util.regex.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder; // Para a borda bonita
 import javax.swing.event.*;
 import javax.swing.text.DefaultHighlighter;
 
 public class InterfaceCompilador extends JFrame {
 
     private JTextArea editorArea;
-    private JTextPane consoleArea;
+    private JTextArea saidaArea;    // Terminal (apenas leitura)
+    private JTextField campoEntrada; // Campo onde você digita
     private JTextArea arvoreArea;
     private JTextArea tokensArea;
     private JTextArea lineNumbers;
     private File arquivoAtual = null;
     
     private No raizArvore = null;
+    
+    // Controle de Thread
+    private static String bufferEntrada = null;
+    private static final Object lock = new Object();
 
     public InterfaceCompilador() {
         super("Compilador Russo - IDE");
@@ -69,19 +75,41 @@ public class InterfaceCompilador extends JFrame {
         JScrollPane scrollEditor = new JScrollPane(editorArea);
         scrollEditor.setRowHeaderView(lineNumbers);
 
-        // --- ABAS INFERIORES ---
+        // --- ABAS ---
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        consoleArea = new JTextPane();
-        consoleArea.setContentType("text/html");
-        consoleArea.setEditable(false);
-        tabbedPane.addTab("Terminal / Saida", new JScrollPane(consoleArea));
+        // 1. ABA TERMINAL
+        JPanel painelTerminal = new JPanel(new BorderLayout());
+        
+        // Área de Saída (Onde aparece o texto)
+        saidaArea = new JTextArea();
+        saidaArea.setEditable(false); // O usuário NÃO pode digitar aqui
+        saidaArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+        saidaArea.setBackground(Color.WHITE); 
+        saidaArea.setForeground(Color.BLACK);
+        
+        // Campo de Entrada (Onde o usuário DEVE digitar)
+        campoEntrada = new JTextField();
+        campoEntrada.setFont(new Font("Consolas", Font.BOLD, 14));
+        campoEntrada.setBackground(new Color(230, 230, 230)); // Cinza quando desativado
+        campoEntrada.setForeground(Color.BLACK);
+        campoEntrada.setEnabled(false); // Começa travado
+        campoEntrada.setBorder(new TitledBorder("Entrada de Dados (Digite aqui quando solicitado)"));
+        
+        campoEntrada.addActionListener(e -> enviarEntrada()); // Funciona ao dar Enter
 
+        painelTerminal.add(new JScrollPane(saidaArea), BorderLayout.CENTER);
+        painelTerminal.add(campoEntrada, BorderLayout.SOUTH);
+        
+        tabbedPane.addTab("Terminal / Execucao", painelTerminal);
+
+        // 2. ABA ARVORE
         arvoreArea = new JTextArea();
         arvoreArea.setEditable(false);
         arvoreArea.setFont(new Font("Consolas", Font.PLAIN, 14));
         tabbedPane.addTab("Arvore Sintatica", new JScrollPane(arvoreArea));
 
+        // 3. ABA TOKENS
         tokensArea = new JTextArea();
         tokensArea.setEditable(false);
         tokensArea.setFont(new Font("Consolas", Font.PLAIN, 14));
@@ -94,166 +122,182 @@ public class InterfaceCompilador extends JFrame {
         setVisible(true);
     }
 
-    private void atualizarLinhas() {
-        int lines = editorArea.getLineCount();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 1; i <= lines; i++) { sb.append(i).append("\n"); }
-        lineNumbers.setText(sb.toString());
-    }
+    // --- LÓGICA DE INPUT ---
+    private void enviarEntrada() {
+        synchronized (lock) {
+            bufferEntrada = campoEntrada.getText();
+            
+            // Mostra o que você digitou na tela de cima para manter histórico
+            saidaArea.append(bufferEntrada + "\n");
+            saidaArea.setCaretPosition(saidaArea.getDocument().getLength());
 
-    private void abrirArquivo() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Arquivos de Texto", "txt", "rus"));
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            try {
-                arquivoAtual = fileChooser.getSelectedFile();
-                editorArea.setText(Files.readString(arquivoAtual.toPath()));
-                atualizarLinhas();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Erro: " + ex.getMessage());
-            }
+            campoEntrada.setText("");
+            campoEntrada.setEnabled(false); // Trava de novo
+            campoEntrada.setBackground(new Color(230, 230, 230)); // Volta pra cinza
+            
+            lock.notify(); // Destrava o interpretador
         }
     }
 
+    public static String lerEntradaUsuario() {
+        // Usa invokeLater para mexer na interface com segurança
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = (JFrame) Frame.getFrames()[0];
+            if(frame instanceof InterfaceCompilador) {
+                InterfaceCompilador gui = (InterfaceCompilador) frame;
+                
+                // Ativa o campo e muda a cor para AMARELO
+                gui.campoEntrada.setEnabled(true);
+                gui.campoEntrada.setBackground(new Color(255, 255, 200)); // Amarelo claro
+                gui.campoEntrada.requestFocus(); // Joga o foco lá
+            }
+        });
+
+        // Pausa a thread do interpretador até o usuário dar Enter
+        synchronized (lock) {
+            try { lock.wait(); } catch (InterruptedException e) {}
+        }
+        return bufferEntrada;
+    }
+
+    // --- COMPILAÇÃO E EXECUÇÃO ---
     private void compilarCodigo() {
         String codigo = editorArea.getText();
         limparInterface();
         this.raizArvore = null;
 
-        if (codigo.isEmpty()) {
-        consoleArea.setText("<html><font color='orange'>Digite algum código antes de compilar.</font></html>");
-        return;
+        if (codigo.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Digite algum codigo para compilar.");
+            return;
         }
 
-        PrintStream originalOut = System.out;
-        ByteArrayOutputStream baosArvore = new ByteArrayOutputStream();
-        ByteArrayOutputStream baosExecucao = new ByteArrayOutputStream();
+        // Thread separada para a execução (Isso evita que a interface congele)
+        new Thread(() -> {
+            ByteArrayOutputStream baosArvore = new ByteArrayOutputStream();
+            try {
+                // 1. Tokens
+                listarTokens(codigo);
 
-        StringBuilder htmlFinal = new StringBuilder("<html><body style='font-family:Consolas;'>");
-
-        try {
-            listarTokens(codigo);
-
-            InputStream is = new ByteArrayInputStream(codigo.getBytes());
-            RusskiyCompiler parser = new RusskiyCompiler(is);
-            
-            System.setOut(new PrintStream(baosArvore)); 
-            this.raizArvore = parser.Programa(); 
-            
-            arvoreArea.setText(baosArvore.toString());
-
-            htmlFinal.append("<h2 style='color:green;'>✔ Compilado com sucesso!</h2>");
-            htmlFinal.append("<hr><b>Saida do Programa:</b><br><br>");
-
-            // --- EXECUCAO ---
-            if (this.raizArvore != null) {
-                System.setOut(new PrintStream(baosExecucao)); // Captura System.out.println
+                // 2. Parser
+                InputStream is = new ByteArrayInputStream(codigo.getBytes());
+                RusskiyCompiler parser = new RusskiyCompiler(is);
                 
-                // Mapa de memória para variáveis
-                this.raizArvore.executar(new HashMap<>());
+                // Captura a árvore
+                PrintStream oldOut = System.out;
+                System.setOut(new PrintStream(baosArvore));
+                this.raizArvore = parser.Programa();
+                System.setOut(oldOut);
                 
-                String saidaTexto = baosExecucao.toString();
-                if(saidaTexto.isEmpty()) saidaTexto = "(Nenhuma saida de dados)";
-                
-                htmlFinal.append("<span style='color:blue;'>" + saidaTexto.replace("\n", "<br>") + "</span>");
+                // Atualiza a árvore na aba correta (Thread-safe)
+                SwingUtilities.invokeLater(() -> arvoreArea.setText(baosArvore.toString()));
+
+                // 3. Execução
+                if (this.raizArvore != null) {
+                    safeAppend("--- INICIO DA EXECUCAO ---\n");
+                    
+                    // Redireciona o System.out do interpretador para o JTextArea de forma SEGURA
+                    PrintStream printTerminal = new PrintStream(new OutputStream() {
+                        @Override
+                        public void write(int b) throws IOException {
+                            // Atualiza a interface na thread correta
+                            SwingUtilities.invokeLater(() -> {
+                                saidaArea.append(String.valueOf((char) b));
+                                saidaArea.setCaretPosition(saidaArea.getDocument().getLength());
+                            });
+                        }
+                    });
+                    System.setOut(printTerminal);
+
+                    this.raizArvore.executar(new HashMap<>());
+                    
+                    System.setOut(oldOut); // Restaura o console
+                    safeAppend("\n--- SUCESSO ---\n");
+                }
+
+            } catch (ParseException e) {
+                tratarErro(e.getMessage(), true);
+            } catch (TokenMgrError e) {
+                tratarErro(e.getMessage(), false);
+            } catch (Exception e) {
+                safeAppend("\n[ERRO]: " + e.getMessage() + "\n");
             }
+        }).start();
+    }
 
-        } catch (ParseException e) {
-            tratarErro(e.getMessage(), true, htmlFinal);
-        } catch (TokenMgrError e) {
-            tratarErro(e.getMessage(), false, htmlFinal);
-        } catch (Exception e) {
-            htmlFinal.append("<h3 style='color:red;'>Erro de Execucao:</h3>");
-            htmlFinal.append("<p>" + e.getMessage() + "</p>");
-        } finally {
-            System.setOut(originalOut); 
-            htmlFinal.append("</body></html>");
-            consoleArea.setText(htmlFinal.toString());
-        }
+    // Método auxiliar para escrever no terminal sem travar
+    private void safeAppend(String text) {
+        SwingUtilities.invokeLater(() -> {
+            saidaArea.append(text);
+            saidaArea.setCaretPosition(saidaArea.getDocument().getLength());
+        });
     }
 
     private void salvarArquivo() {
         try {
-            // Se nunca foi salvo antes → salvar como
             if (arquivoAtual == null) {
                 JFileChooser fileChooser = new JFileChooser();
                 fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Arquivos de Texto", "txt", "rus"));
-    
-                int result = fileChooser.showSaveDialog(this);
-                if (result != JFileChooser.APPROVE_OPTION) {
-                    return; // usuário cancelou
-                }
-    
-                arquivoAtual = fileChooser.getSelectedFile();
-    
-                // Garante extensão .rus
-                if (!arquivoAtual.getName().contains(".")) {
-                    arquivoAtual = new File(arquivoAtual.getAbsolutePath() + ".rus");
-                }
+                if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                    arquivoAtual = fileChooser.getSelectedFile();
+                    if (!arquivoAtual.getName().contains(".")) 
+                        arquivoAtual = new File(arquivoAtual.getAbsolutePath() + ".rus");
+                } else return;
             }
-    
-            // Salva conteúdo atual do editor
             Files.writeString(arquivoAtual.toPath(), editorArea.getText());
-    
-            JOptionPane.showMessageDialog(this, "Arquivo salvo com sucesso:\n" + arquivoAtual.getName());
-    
+            JOptionPane.showMessageDialog(this, "Salvo com sucesso!");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao salvar: " + e.getMessage());
         }
-    }    
-
-    private void listarTokens(String codigo) {
-        StringBuilder sb = new StringBuilder();
-        InputStream is = new ByteArrayInputStream(codigo.getBytes());
-        RusskiyCompilerTokenManager tm = new RusskiyCompilerTokenManager(new SimpleCharStream(is));
-        Token t = tm.getNextToken();
-        while (t.kind != RusskiyCompilerConstants.EOF) {
-            String nomeToken = RusskiyCompilerConstants.tokenImage[t.kind].replace("\"", "");
-            sb.append(String.format("L:%d | %s -> %s\n", t.beginLine, nomeToken, t.image));
-            t = tm.getNextToken();
-        }
-        tokensArea.setText(sb.toString());
     }
 
-    private void tratarErro(String msgOriginal, boolean isSintatico, StringBuilder html) {
-        // Regex poderosa para achar a linha em qualquer formato de erro
-        // Procura por "line X" ou "linha X" (case insensitive)
-        int linhaErro = -1;
-        Pattern p = Pattern.compile("(line|linha)\\s*:?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
-        Matcher m = p.matcher(msgOriginal);
-        if (m.find()) {
-            linhaErro = Integer.parseInt(m.group(2));
-            realcarLinhaErro(linhaErro);
-        }
+    private void listarTokens(String codigo) {
+        // Executa na thread principal pois é rápido
+        SwingUtilities.invokeLater(() -> {
+            try {
+                StringBuilder sb = new StringBuilder();
+                InputStream is = new ByteArrayInputStream(codigo.getBytes());
+                RusskiyCompilerTokenManager tm = new RusskiyCompilerTokenManager(new SimpleCharStream(is));
+                Token t = tm.getNextToken();
+                while (t.kind != RusskiyCompilerConstants.EOF) {
+                    String nomeToken = RusskiyCompilerConstants.tokenImage[t.kind].replace("\"", "");
+                    sb.append(String.format("L:%d | %s -> %s\n", t.beginLine, nomeToken, t.image));
+                    t = tm.getNextToken();
+                }
+                tokensArea.setText(sb.toString());
+            } catch(Exception e) {}
+        });
+    }
 
-        String msgTraduzida = msgOriginal
-                .replace("Encountered", "Encontrado")
-                .replace("at line", "na linha")
-                .replace("column", "coluna")
-                .replace("Expected:", "Esperado:")
-                .replace("Lexical error", "Erro Lexico")
-                .replace("Was expecting one of:", "Esperava um destes:");
+    private void tratarErro(String msgOriginal, boolean isSintatico) {
+        SwingUtilities.invokeLater(() -> {
+            String msgTraduzida = msgOriginal
+                    .replace("Encountered", "Encontrado")
+                    .replace("at line", "na linha")
+                    .replace("column", "coluna")
+                    .replace("Expected:", "Esperado:")
+                    .replace("Lexical error", "Erro Lexico")
+                    .replace("Was expecting one of:", "Esperava um destes:");
 
-        String titulo = isSintatico ? "❌ Erro Sintatico / Semantico" : "❌ Erro Lexico";
-        html.append("<h3 style='color:red;'>" + titulo + "</h3>");
-        html.append("<p>" + msgTraduzida + "</p>");
-        
-        if (linhaErro != -1) {
-            html.append("<p><b>Erro detectado na linha: " + linhaErro + "</b></p>");
-        }
+            int linhaErro = 1;
+            Pattern p = Pattern.compile("linha (\\d+)", Pattern.CASE_INSENSITIVE);
+            Matcher m = p.matcher(msgTraduzida);
+            if (m.find()) {
+                linhaErro = Integer.parseInt(m.group(1));
+                realcarLinhaErro(linhaErro);
+            }
+            
+            saidaArea.setForeground(Color.RED);
+            saidaArea.append("\n[ERRO]: " + msgTraduzida + "\n");
+        });
     }
 
     private void realcarLinhaErro(int linha) {
         try {
-            // Swing conta linhas a partir do 0, JavaCC a partir do 1
             int start = editorArea.getLineStartOffset(linha - 1);
             int end = editorArea.getLineEndOffset(linha - 1);
             editorArea.getHighlighter().addHighlight(start, end, 
                 new DefaultHighlighter.DefaultHighlightPainter(new Color(255, 200, 200)));
-        } catch (Exception e) {
-            // Se a linha não existir (ex: erro no EOF), ignora o highlight
-        }
+        } catch (Exception e) {}
     }
     
     private void gerarCodigoC() {
@@ -267,16 +311,35 @@ public class InterfaceCompilador extends JFrame {
             Files.writeString(arquivoSaida.toPath(), codigoC);
             JOptionPane.showMessageDialog(this, "Arquivo 'saida.c' gerado com sucesso!");
             
-            String htmlC = "<html><h3 style='color:blue'>Codigo C Gerado:</h3><pre>" + codigoC + "</pre></html>";
-            consoleArea.setText(htmlC);
-
+            // Mostra o código gerado no terminal também
+            safeAppend("\n--- CODIGO C GERADO ---\n" + codigoC + "\n-----------------------\n");
+            
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Erro ao salvar arquivo: " + e.getMessage());
         }
     }
 
+    private void atualizarLinhas() {
+        int lines = editorArea.getLineCount();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= lines; i++) { sb.append(i).append("\n"); }
+        lineNumbers.setText(sb.toString());
+    }
+
+    private void abrirArquivo() {
+        JFileChooser fileChooser = new JFileChooser();
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            try {
+                arquivoAtual = fileChooser.getSelectedFile();
+                editorArea.setText(Files.readString(arquivoAtual.toPath()));
+            } catch (Exception ex) {}
+        }
+    }
+
     private void limparInterface() {
-        consoleArea.setText("");
+        saidaArea.setText("");
+        saidaArea.setForeground(Color.BLACK); // Volta para preto (pois o fundo é branco)
         arvoreArea.setText("");
         tokensArea.setText("");
         editorArea.getHighlighter().removeAllHighlights();
