@@ -1,9 +1,9 @@
-# Compilador Russo
+# Compilador Russo/Russkiy
 
 ## Introdução
-Este repositório contém a implementação e a documentação referentes ao desenvolvimento de um compilador educacional, criado como parte do trabalho acadêmico da disciplina de **Construção de Compiladores**.  
+Este repositório contém a implementação e documentação referentes ao desenvolvimento de um compilador educacional, criado como parte do trabalho acadêmico da disciplina de **Construção de Compiladores**.  
 
-O compilador proposto diferencia-se por utilizar **palavras-chave em língua russa** para a definição dos comandos da linguagem fonte. O trabalho segue as etapas clássicas de construção de compiladores, contemplando análise léxica, sintática e um controle básico de erros.  
+O compilador proposto tem como inspiração a linguagem C e diferencia-se por utilizar **russo transliterado** na definição dos comandos da linguagem fonte. O trabalho segue as etapas clássicas da construção de compiladores, contemplando a análise léxica, a análise sintática e um controle básico de erros.
 
 ---
 
@@ -25,15 +25,29 @@ O compilador proposto diferencia-se por utilizar **palavras-chave em língua rus
 
 ## Tecnologias Utilizadas
 Para a implementação do compilador, são utilizadas ferramentas clássicas de apoio, tais como:  
-- **Lex/Yacc**, ou  
-- **JFlex/CUP**, ou  
-- **JavaCC**,  
-
-conforme a linguagem de programação escolhida pelo grupo (C ou Java).  
+- **Linguagem java** 
+- **JavaCC**
+- **Biblioteca Swing**   
 
 ---
 
 ## Estrutura da Linguagem
-A linguagem criada utiliza palavras-chave em russo, preservando a semântica básica de linguagens imperativas.  
+A linguagem desenvolvida utiliza palavras do russo transliteradas para o alfabeto latino, mantendo a semântica fundamental das linguagens imperativas. A seguir, apresentam-se os principais equivalentes, na linguagem C, dos termos adotados.
 
+- `pusto` = `void`
+- `tseloye` = `int`
+- `drobnoye` = `float`
+- `slova` = `string`
+- `dvoichnaya` = `bool`
+- `pravda` = `true`
+- `nepravda` = `false`
+- `yesli` = `if`
+- `inache` = `else`
+- `kazhday` = `for`
+- `poka` = `while`
+- `vyvod` = `printf`
+- `vvod` = `scanf`
+- `funktsiya` = `function`
+
+Além desses termos, outras construções e atribuições da linguagem são definidas e detalhadas formalmente por meio da gramática Backus–Naur Form (BNF) do projeto.
  
